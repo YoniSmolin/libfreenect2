@@ -118,7 +118,7 @@ IF(ENABLE_TEGRA_JPEG AND EXISTS "/etc/nv_tegra_release")
   INCLUDE_DIRECTORIES("${MY_DIR}/../../depends/gstjpeg_src")
   CHECK_SYMBOL_EXISTS(TEGRA_ACCELERATE "${MY_DIR}/../../depends/gstjpeg_src/nv_headers/jconfig.h" TEGRA_JPEG_HEADERS)
   IF(NOT TEGRA_JPEG_HEADERS)
-    MESSAGE(FATAL_ERROR "Did not find headers for Tegra JPEG library in ${MY_DIR}/../../depends/gstjpeg_src/nv_headers")
+    #MESSAGE(FATAL_ERROR "Did not find headers for Tegra JPEG library in ${MY_DIR}/../../depends/gstjpeg_src/nv_headers")
   ENDIF(NOT TEGRA_JPEG_HEADERS)
 
   MESSAGE(STATUS "Found Tegra hardware accelerated JPEG support")
@@ -207,6 +207,14 @@ ADD_EXECUTABLE(Protonect
 TARGET_LINK_LIBRARIES(Protonect
   freenect2
 )
+
+ADD_EXECUTABLE(DepthServer
+	DepthServer.cpp
+	)
+
+TARGET_LINK_LIBRARIES(DepthServer
+	freenect2
+	)
 
 CONFIGURE_FILE(freenect2.cmake.in "${PROJECT_BINARY_DIR}/freenect2Config.cmake" @ONLY)
 
