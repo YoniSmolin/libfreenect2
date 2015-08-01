@@ -35,6 +35,10 @@
 #include <libfreenect2/frame_listener_impl.h>
 #include <libfreenect2/threading.h>
 
+#include <networking/Server.hpp>
+
+#define PORT "3490"
+
 bool protonect_shutdown = false;
 
 void sigint_handler(int s)
@@ -110,7 +114,7 @@ int main(int argc, char *argv[])
 //  cv::moveWindow("Infrared Image",64,624) ;
   cv::namedWindow("Depth Image (Grayscale)",CV_WINDOW_NORMAL) ;
   cv::resizeWindow("Depth Image (Grayscale)",512,424) ;
-  cv::moveWindow("Depth Image (Grayscale)",584,624) ;
+  cv::moveWindow("Depth Image (Grayscale) - Server",584,624) ;
 //  cv::namedWindow("Depth Image (Colormap)",CV_WINDOW_NORMAL) ;
 //  cv::resizeWindow("Depth Image (Colormap)",512,424) ;
 //  cv::moveWindow("Depth Image (Colormap)",1104,624) ;
@@ -123,8 +127,12 @@ int main(int argc, char *argv[])
   std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
   std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
 //  cv::Mat colorMapImage;
-//  cv::Mat depthConverted ;
+  cv::Mat depthConverted ;
 //  int colorMapType = cv::COLORMAP_JET ;
+
+  Server server(PORT);
+  std::cout << "Successfully initialized server" << std::endl;
+  server.WaitForClient();
 
   while(!protonect_shutdown)
   {
@@ -149,12 +157,16 @@ int main(int argc, char *argv[])
     // cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
     cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data)  / 4500.0f ;
     // convert values from 0..1 to 0..255
-//    depthMat.convertTo(depthConverted,CV_8UC1,255,0);
+    depthMat.convertTo(depthConverted,CV_8UC1,255,0);
+    std::cout << "Depth image is" << (depthConverted.isContinuous() ? " ":" not ") << "continuous" << std::endl;
 //    cv::applyColorMap(depthConverted, colorMapImage, colorMapType);
 //    cv::imshow("Depth Image (Colormap)", colorMapImage);
-    cv::imshow("Depth Image (Grayscale)", depthMat);
+    cv::imshow("Depth Image (Grayscale) - Server", depthConverted); //depthMat);
 
     int key = cv::waitKey(1);
+
+    server.SendMatrix((char*)depthConverted.data, depth->height, depth->width);  
+
 //    if (key != -1) {
 //	std::cout << "Key pressed: " << key << std::endl;
 //    }
@@ -189,6 +201,9 @@ int main(int argc, char *argv[])
   // TODO: bad things will happen, if frame listeners are freed before dev->stop() :(
   dev->stop();
   dev->close();
+
+  server.CloseConnection();
+  std::cout << "Server connection closed";
 
   return 0;
 }

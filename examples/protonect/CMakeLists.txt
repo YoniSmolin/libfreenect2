@@ -94,6 +94,8 @@ SET(SOURCES
   src/libfreenect2.cpp
   ${LIBFREENECT2_THREADING_SOURCE}
   ${RESOURCES_INC_FILE}
+
+  src/Server.cpp
 )
 
 SET(LIBRARIES
@@ -199,7 +201,7 @@ INCLUDE_DIRECTORIES("${MY_DIR}/include")
 ADD_DEFINITIONS(-DRESOURCES_INC)
 ADD_LIBRARY(freenect2 SHARED ${SOURCES})
 TARGET_LINK_LIBRARIES(freenect2 ${LIBRARIES})
-  
+
 ADD_EXECUTABLE(Protonect
   Protonect.cpp
 )
@@ -213,7 +215,7 @@ ADD_EXECUTABLE(DepthServer
 	)
 
 TARGET_LINK_LIBRARIES(DepthServer
-	freenect2
+	freenect2 
 	)
 
 CONFIGURE_FILE(freenect2.cmake.in "${PROJECT_BINARY_DIR}/freenect2Config.cmake" @ONLY)
