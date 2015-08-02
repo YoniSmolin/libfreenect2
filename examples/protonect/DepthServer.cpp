@@ -37,7 +37,10 @@
 
 #include <networking/Server.hpp>
 
+#include <CUDA/Filter.h>
+
 #define PORT "3490"
+#define DEPTH_THRESHOLD (uchar) 100
 
 bool protonect_shutdown = false;
 
@@ -112,13 +115,14 @@ int main(int argc, char *argv[])
 //  cv::namedWindow("Infrared Image",CV_WINDOW_NORMAL) ;
 //  cv::resizeWindow("Infrared Image",512,424) ;
 //  cv::moveWindow("Infrared Image",64,624) ;
-  cv::namedWindow("Depth Image (Grayscale)",CV_WINDOW_NORMAL) ;
-  cv::resizeWindow("Depth Image (Grayscale)",512,424) ;
-  cv::moveWindow("Depth Image (Grayscale) - Server",584,624) ;
+//  cv::namedWindow("Depth Image (Grayscale)",CV_WINDOW_NORMAL) ;
+//  cv::resizeWindow("Depth Image (Grayscale)",512,424) ;
+  cv::moveWindow("Server",584,624) ;
 //  cv::namedWindow("Depth Image (Colormap)",CV_WINDOW_NORMAL) ;
 //  cv::resizeWindow("Depth Image (Colormap)",512,424) ;
 //  cv::moveWindow("Depth Image (Colormap)",1104,624) ;
- 
+
+  uchar depthFiltered[512*424]; 
 
 //  dev->setColorFrameListener(&listener);
   dev->setIrAndDepthFrameListener(&listener);
@@ -155,17 +159,21 @@ int main(int argc, char *argv[])
     
     // Colorize the depth image; - it's only 8 bit, but seems better than gray
     // cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
+    std::cout << "Depth height is: " << depth->height << std::endl;
+    std::cout << "Depth width is: " << depth->width << std::endl;
     cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data)  / 4500.0f ;
     // convert values from 0..1 to 0..255
     depthMat.convertTo(depthConverted,CV_8UC1,255,0);
-    std::cout << "Depth image is" << (depthConverted.isContinuous() ? " ":" not ") << "continuous" << std::endl;
 //    cv::applyColorMap(depthConverted, colorMapImage, colorMapType);
 //    cv::imshow("Depth Image (Colormap)", colorMapImage);
-    cv::imshow("Depth Image (Grayscale) - Server", depthConverted); //depthMat);
+	
+    
+    cv::imshow("Server", depthConverted); //depthMat);
 
     int key = cv::waitKey(1);
 
-    server.SendMatrix((char*)depthConverted.data, depth->height, depth->width);  
+    FilterGPU(depthConverted.data, depthFiltered, depth->height, depth->width, DEPTH_THRESHOLD);
+    server.SendMatrix((char*)depthFiltered, depth->height, depth->width);  
 
 //    if (key != -1) {
 //	std::cout << "Key pressed: " << key << std::endl;

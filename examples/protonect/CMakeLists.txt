@@ -177,8 +177,8 @@ IF(ENABLE_CUDA AND CUDA_FOUND)
   MESSAGE(STATUS "CUDA enabled")
   SET(LIBFREENECT2_WITH_CUDA_SUPPORT 1)
 
-  CUDA_INCLUDE_DIRECTORIES("${MY_DIR}/include/" "${CUDA_TOOLKIT_ROOT_DIR}/samples/common/inc")
-  CUDA_COMPILE(CUDA_OBJECTS src/cuda_depth_packet_processor.cu OPTIONS -use_fast_math -Xcompiler -fPIC)
+  CUDA_INCLUDE_DIRECTORIES("${MY_DIR}/include/" "${CUDA_TOOLKIT_ROOT_DIR}/samples/common/inc" "${MY_DIR}/include/CUDA")
+  CUDA_COMPILE(CUDA_OBJECTS src/cuda_depth_packet_processor.cu src/Filter.cu OPTIONS -use_fast_math -Xcompiler -fPIC)
 
   INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
 
