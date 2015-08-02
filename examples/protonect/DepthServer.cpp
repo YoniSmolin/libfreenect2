@@ -159,8 +159,6 @@ int main(int argc, char *argv[])
     
     // Colorize the depth image; - it's only 8 bit, but seems better than gray
     // cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
-    std::cout << "Depth height is: " << depth->height << std::endl;
-    std::cout << "Depth width is: " << depth->width << std::endl;
     cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data)  / 4500.0f ;
     // convert values from 0..1 to 0..255
     depthMat.convertTo(depthConverted,CV_8UC1,255,0);
