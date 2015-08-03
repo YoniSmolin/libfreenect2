@@ -35,12 +35,9 @@
 #include <libfreenect2/frame_listener_impl.h>
 #include <libfreenect2/threading.h>
 
-#include <networking/Server.hpp>
-
 #include <CUDA/Filter.h>
 
 #define PORT "3490"
-#define DEPTH_THRESHOLD (uchar) 100
 
 bool protonect_shutdown = false;
 
@@ -77,13 +74,6 @@ void sigint_handler(int s)
 
 int main(int argc, char *argv[])
 {
-  if (argc < 2)
-  {
-	  std::cout << "Usage: DepthServer <depth threshold in [mm]>" << std::endl;
-	  return -1;
-  }
-
-  float depthThreshold = strtof(argv[1], NULL);
   std::string program_path(argv[0]);
   size_t executable_name_idx = program_path.rfind("Protonect");
 
@@ -125,11 +115,13 @@ int main(int argc, char *argv[])
 //  cv::namedWindow("Depth Image (Grayscale)",CV_WINDOW_NORMAL) ;
 //  cv::resizeWindow("Depth Image (Grayscale)",512,424) ;
   cv::moveWindow("Server",584,624) ;
+  cv::moveWindow("Filtered",584,624) ;
 //  cv::namedWindow("Depth Image (Colormap)",CV_WINDOW_NORMAL) ;
 //  cv::resizeWindow("Depth Image (Colormap)",512,424) ;
 //  cv::moveWindow("Depth Image (Colormap)",1104,624) ;
 
-  float depthFiltered[512*424]; 
+  uchar depthFiltered[512*424]; 
+  float depthFilteredFloat[512*424];
 //  dev->setColorFrameListener(&listener);
   dev->setIrAndDepthFrameListener(&listener);
   dev->start();
@@ -139,10 +131,6 @@ int main(int argc, char *argv[])
 //  cv::Mat colorMapImage;
   cv::Mat depthConverted ;
 //  int colorMapType = cv::COLORMAP_JET ;
-
-  Server server(PORT);
-  std::cout << "Successfully initialized server" << std::endl;
-  server.WaitForClient();
 
   while(!protonect_shutdown)
   {
@@ -166,20 +154,27 @@ int main(int argc, char *argv[])
     // Colorize the depth image; - it's only 8 bit, but seems better than gray
     // cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
     cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
-    // convert values from 0..1 to 0..255
-    cv::Mat depthNormalized = depthMat / 4500.f;
-    depthNormalized.convertTo(depthConverted,CV_8UC1,255,0);
+    cv::Mat depthScaled = depthMat / 4500.f;
+    
+    depthScaled.convertTo(depthConverted,CV_8UC1,255,0);
 //    cv::applyColorMap(depthConverted, colorMapImage, colorMapType);
 //    cv::imshow("Depth Image (Colormap)", colorMapImage);
-	
+
+//    std::cout << "value at [250,250]: " << 4500.0f * depthMat.at<float>(250,250) << std::endl;
+    
     cv::imshow("Server", depthConverted); //depthMat);
 
     int key = cv::waitKey(1);
 
-    FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, depthThreshold);
-    depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) / 4500.0f;
+    FilterGPU((float*)depthMat.data, depthFilteredFloat, depth->height, depth->width, strtof(argv[1], NULL)); 
+
+    depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depthFilteredFloat) / 4500.0f;
     depthMat.convertTo(depthConverted,CV_8UC1,255,0);
-    server.SendMatrix((char*)depthConverted.data, depth->height, depth->width);  
+
+    cv::imshow("Filtered", depthConverted); 
+    //FilterGPU(depthConverted.data, depthFiltered, depth->height, depth->width, DEPTH_THRESHOLD);
+
+    cv::waitKey(1);
 
 //    if (key != -1) {
 //	std::cout << "Key pressed: " << key << std::endl;
@@ -215,9 +210,6 @@ int main(int argc, char *argv[])
   // TODO: bad things will happen, if frame listeners are freed before dev->stop() :(
   dev->stop();
   dev->close();
-
-  server.CloseConnection();
-  std::cout << "Server connection closed";
 
   return 0;
 }

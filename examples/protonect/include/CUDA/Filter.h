@@ -4,4 +4,5 @@
 
 typedef unsigned char uchar;
 
-void FilterGPU(const uchar* in, uchar* out, int ROWS, int COLS, uchar threshold);
+void FilterGPU(const uchar* in, uchar* out, int ROWS, int COLS, uchar threshold, bool verbose = false);
+void FilterGPU(const float* in, float* out, int ROWS, int COLS, float threshold, bool verbose = false);

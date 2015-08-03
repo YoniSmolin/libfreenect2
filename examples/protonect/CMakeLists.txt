@@ -178,7 +178,7 @@ IF(ENABLE_CUDA AND CUDA_FOUND)
   SET(LIBFREENECT2_WITH_CUDA_SUPPORT 1)
 
   CUDA_INCLUDE_DIRECTORIES("${MY_DIR}/include/" "${CUDA_TOOLKIT_ROOT_DIR}/samples/common/inc" "${MY_DIR}/include/CUDA")
-  CUDA_COMPILE(CUDA_OBJECTS src/cuda_depth_packet_processor.cu src/Filter.cu OPTIONS -use_fast_math -Xcompiler -fPIC)
+  CUDA_COMPILE(CUDA_OBJECTS src/cuda_depth_packet_processor.cu src/Filter.cu src/FloatFilter.cu OPTIONS -use_fast_math -Xcompiler -fPIC)
 
   INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
 
@@ -202,21 +202,17 @@ ADD_DEFINITIONS(-DRESOURCES_INC)
 ADD_LIBRARY(freenect2 SHARED ${SOURCES})
 TARGET_LINK_LIBRARIES(freenect2 ${LIBRARIES})
 
-ADD_EXECUTABLE(Protonect
-  Protonect.cpp
-)
+ADD_EXECUTABLE(Protonect  Protonect.cpp)
   
-TARGET_LINK_LIBRARIES(Protonect
-  freenect2
-)
+TARGET_LINK_LIBRARIES(Protonect  freenect2)
 
-ADD_EXECUTABLE(DepthServer
-	DepthServer.cpp
-	)
+ADD_EXECUTABLE(DepthServer  DepthServer.cpp)
 
-TARGET_LINK_LIBRARIES(DepthServer
-	freenect2 
-	)
+TARGET_LINK_LIBRARIES(DepthServer  freenect2)
+
+ADD_EXECUTABLE(DepthFiltered  DepthFiltered.cpp)
+
+TARGET_LINK_LIBRARIES(DepthFiltered  freenect2)
 
 CONFIGURE_FILE(freenect2.cmake.in "${PROJECT_BINARY_DIR}/freenect2Config.cmake" @ONLY)
 
