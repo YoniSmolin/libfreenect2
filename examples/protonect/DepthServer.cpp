@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
   dev->close();
 
   server.CloseConnection();
-  std::cout << "Server connection closed";
+  std::cout << "Server connection closed" << std::endl;
 
   return 0;
 }
