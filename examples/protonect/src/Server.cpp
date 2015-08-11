@@ -117,17 +117,27 @@ void Server::WaitForClient()
 
 int  Server::SendMessage(const char* message, int length)
 {
-	if (send(_sockfd, message, length, 0) == -1)
+	int bytesSent = send(_sockfd, message, length, 0);
+	if (bytesSent == -1)
+	{ 
 		perror("send");
-	return 0;
+		exit(1);
+	}
+	
+	return bytesSent;
 }
 
 int  Server::SendMatrix(const char* matrix, int rowCount, int colCount)
 {
-	for(int row = 0; row < rowCount; row++)
-		SendMessage(matrix + colCount*row, colCount);
+	int bytesSent = 0, bytesRemaining = rowCount * colCount;
 
-	return 0;
+	while(bytesSent	< bytesRemaining)
+	{
+		bytesSent += SendMessage(matrix + bytesSent, bytesRemaining);
+		bytesRemaining -= bytesSent;
+	}
+
+	return bytesSent;
 }
 
 

@@ -114,101 +114,39 @@ int main(int argc, char *argv[])
 	libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Depth); //listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
 	libfreenect2::FrameMap frames;
 
-	// Setup the color image window
-	//  cv::namedWindow("Color Image",CV_WINDOW_NORMAL) ;
-	//  cv::resizeWindow("Color Image",1920/2,1080/2) ;
-	//  cv::moveWindow("Color Image",1920/2,32) ;
-	//  
-	//  cv::namedWindow("Infrared Image",CV_WINDOW_NORMAL) ;
-	//  cv::resizeWindow("Infrared Image",512,424) ;
-	//  cv::moveWindow("Infrared Image",64,624) ;
-	//  cv::namedWindow("Depth Image (Grayscale)",CV_WINDOW_NORMAL) ;
-	//  cv::resizeWindow("Depth Image (Grayscale)",512,424) ;
 	cv::moveWindow("Server",584,624) ;
-	//  cv::namedWindow("Depth Image (Colormap)",CV_WINDOW_NORMAL) ;
-	//  cv::resizeWindow("Depth Image (Colormap)",512,424) ;
-	//  cv::moveWindow("Depth Image (Colormap)",1104,624) ;
-
 	float depthFiltered[512*424]; 
-	//  dev->setColorFrameListener(&listener);
+
 	dev->setIrAndDepthFrameListener(&listener);
 	dev->start();
 
 	std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
 	std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
-	//  cv::Mat colorMapImage;
 	cv::Mat depthConverted ;
-	//  int colorMapType = cv::COLORMAP_JET ;
 
 	Server server(PORT);
 	std::cout << "Successfully initialized server" << std::endl;
 	server.WaitForClient();
 
+	int frameCount = 0;
+
 	while(!protonect_shutdown)
 	{
 		startTiming() ;
 		listener.waitForNewFrame(frames);
-		//    libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
-		//    libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
 		libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
-		//#ifndef LIBFREENECT2_WITH_TEGRA_JPEG_SUPPORT
-		//    cv::imshow("Color Image", cv::Mat(rgb->height, rgb->width, CV_8UC3, rgb->data));
-		//#else
-		//    unsigned char **pprgba = reinterpret_cast<unsigned char **>(rgb->data);
-		//    cv::Mat rgba(1080, 1920, CV_8UC4, pprgba[0]);
-		//    cv::Mat bgra(1080, 1920, CV_8UC4);
-		//    cv::cvtColor(rgba, bgra, cv::COLOR_RGBA2BGRA);
-		//    cv::imshow("Color Image", bgra);
-		//#endif
-		//    cv::imshow("Infrared Image", cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / 20000.0f);
-
-		// Colorize the depth image; - it's only 8 bit, but seems better than gray
-		// cv::imshow("depth", cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) / 4500.0f);
 		cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
-		// convert values from 0..1 to 0..255
-		cv::Mat depthNormalized = depthMat / 4500.f;
-		depthNormalized.convertTo(depthConverted,CV_8UC1,255,0);
-		//    cv::applyColorMap(depthConverted, colorMapImage, colorMapType);
-		//    cv::imshow("Depth Image (Colormap)", colorMapImage);
-
-		cv::imshow("Server", depthConverted); //depthMat);
-
-		int key = cv::waitKey(1);
-
 		FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, depthThreshold);
 		depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) / 4500.0f;
 		depthMat.convertTo(depthConverted,CV_8UC1,255,0);
 		server.SendMatrix((char*)depthConverted.data, depth->height, depth->width);  
 
-		//    if (key != -1) {
-		//	std::cout << "Key pressed: " << key << std::endl;
-		//    }
-		//    switch (key) {
-		//        case 48: {
-		//           colorMapType = 11; 
-		//         }
-		//         break ;
-		//	case 49:
-		//        case 50:
-		//        case 51:
-		//        case 52:
-		//        case 53:
-		//        case 54:
-		//        case 55:
-		//        case 56:
-		//        case 57: {
-		//	     colorMapType = key-49 ;
-		//		}
-		//	  break ;
-		//        default:
-		// 	  break ;
-		//    } ;
-		protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
+		frameCount++;
+		protonect_shutdown = protonect_shutdown || (frameCount > 1000); // shutdown on escape
 
 		listener.release(frames);
 		stopTiming() ;
-		//libfreenect2::this_thread::sleep_for(libfreenect2::chrono::milliseconds(100));
 	}
 
 	// TODO: restarting ir stream doesn't work!
