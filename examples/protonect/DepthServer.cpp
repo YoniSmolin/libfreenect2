@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
 		protonect_shutdown = protonect_shutdown || (frameCount > 1000); // shutdown on escape
 
 		listener.release(frames);
-		stopTiming() ;
+		stopTiming();
 	}
 
 	// TODO: restarting ir stream doesn't work!
