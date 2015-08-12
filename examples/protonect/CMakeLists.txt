@@ -214,10 +214,6 @@ ADD_EXECUTABLE(DepthFiltered  DepthFiltered.cpp)
 
 TARGET_LINK_LIBRARIES(DepthFiltered  freenect2)
 
-ADD_EXECUTABLE(DepthServerPlayground DepthServerPlayground.cpp)
-
-TARGET_LINK_LIBRARIES(DepthServerPlayground freenect2)
-
 CONFIGURE_FILE(freenect2.cmake.in "${PROJECT_BINARY_DIR}/freenect2Config.cmake" @ONLY)
 
 INSTALL(TARGETS freenect2 DESTINATION lib)
