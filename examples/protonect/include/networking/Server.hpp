@@ -17,6 +17,7 @@ class Server
 		int  SendMessage(const char* message, int length);
 		void CloseConnection();
 		int  SendMatrix(const char* matrix, int rowCount, int colCount);
+		int  SendMatrix(const float* matrix, int rowCount, int colCount);
 
 	private:
 		void sigchld_handler(int s);

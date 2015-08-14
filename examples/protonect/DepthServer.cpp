@@ -138,9 +138,7 @@ int main(int argc, char *argv[])
 
 		cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
 		FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, depthThreshold);
-		depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) / 4500.0f;
-		depthMat.convertTo(depthConverted,CV_8UC1,255,0);
-		server.SendMatrix((char*)depthConverted.data, depth->height, depth->width);  
+		server.SendMatrix(depthFiltered, depth->height, depth->width);  
 
 		frameCount++;
 		protonect_shutdown = protonect_shutdown || (frameCount > 1000); // shutdown on escape

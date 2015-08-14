@@ -140,6 +140,13 @@ int  Server::SendMatrix(const char* matrix, int rowCount, int colCount)
 	return bytesSent;
 }
 
+int  Server::SendMatrix(const float* matrix, int rowCount, int colCount)
+{
+	if (sizeof(float) != 4)
+		fprintf(stderr, "Server::SendMatrix - Float size must be 32 bits\n");
+
+	return SendMatrix((char*) matrix, rowCount, colCount * sizeof(float));
+}
 
 void Server::CloseConnection()
 {
