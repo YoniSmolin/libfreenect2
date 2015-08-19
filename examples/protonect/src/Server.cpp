@@ -21,9 +21,14 @@
 
 #include <networking/Server.hpp>
 
+#define BYTES_PER_COMPRESSED_PIXEL 4
+#define BYTES_IN_HEADER 3
+#define BYTE 8
+#define BITS_TWO_TO_NINE 0x000001fe
+
 using namespace std;
 
-Server::Server(const char* portNumber) : BACKLOG(1)
+Server::Server(const char* portNumber, int rowCount, int colCount) : BACKLOG(1), _rows(rowCount), _columns(colCount), _compressedImageBuffer(NULL)
 { 
 	struct addrinfo hints, *servinfo, *p; 
 	int yes=1; 
@@ -117,40 +122,79 @@ void Server::WaitForClient()
 
 int  Server::SendMessage(const char* message, int length)
 {
-	int bytesSent = send(_sockfd, message, length, 0);
-	if (bytesSent == -1)
-	{ 
-		perror("send");
-		exit(1);
-	}
-	
-	return bytesSent;
-}
-
-int  Server::SendMatrix(const char* matrix, int rowCount, int colCount)
-{
-	int bytesSent = 0, bytesRemaining = rowCount * colCount;
-
-	while(bytesSent	< bytesRemaining)
+	int totalSent = 0;
+	while(totalSent < length)
 	{
-		bytesSent += SendMessage(matrix + bytesSent, bytesRemaining);
-		bytesRemaining -= bytesSent;
+		int bytesSent =	send(_sockfd, message + totalSent, length, 0);
+		if (bytesSent == -1)
+		{ 
+			perror("send");
+			exit(1);
+		}
+		totalSent += bytesSent;
 	}
 
-	return bytesSent;
+	return totalSent;
 }
 
-int  Server::SendMatrix(const float* matrix, int rowCount, int colCount)
+int  Server::SendMatrix(const char* matrix)
+{
+	return SendMessage(matrix, _rows * _columns);
+}
+
+int  Server::SendMatrix(const float* matrix)
 {
 	if (sizeof(float) != 4)
 		fprintf(stderr, "Server::SendMatrix - Float size must be 32 bits\n");
 
-	return SendMatrix((char*) matrix, rowCount, colCount * sizeof(float));
+	return SendMessage((char*) matrix, _rows * _columns * sizeof(float));
 }
 
 void Server::CloseConnection()
 {
 	close(_sockfd);
+}
+
+int  Server::SendCompressed(const uchar* reference, uchar* toSend)
+{
+	if (_compressedImageBuffer == NULL)
+		_compressedImageBuffer = new char[_rows * _columns * BYTES_PER_COMPRESSED_PIXEL + BYTES_IN_HEADER];
+
+	int indexCompressed = BYTES_IN_HEADER;
+
+	// compress data
+	for (int row = 0; row < _rows; row++)
+	{
+		for (int col = 0; col < _columns; col++)
+		{
+			int indexOriginal = row * _columns + col;
+			int difference = (int)toSend[indexOriginal] - (int)reference[indexOriginal]; // the casts here are important in order to preserve sign information
+
+			if (difference != 0)
+			{
+				_compressedImageBuffer[indexCompressed++] = indexOriginal;      // store 8 LSBs 
+				_compressedImageBuffer[indexCompressed++] = indexOriginal >> BYTE; // store following (more significant) 8 LSBs
+				_compressedImageBuffer[indexCompressed++] = (indexOriginal >> 2*BYTE) + ((difference & 1) << (BYTE - 1)); // final 2 bits of the index and the LSB of the difference are stored here
+				_compressedImageBuffer[indexCompressed++] = (difference & BITS_TWO_TO_NINE) >> 1; // the rest 8 bits of the difference
+			}
+
+		}
+	}
+
+	// prepare image header - contains the length of the compressed image
+	int compressedLength = indexCompressed - BYTES_IN_HEADER;
+	_compressedImageBuffer[0] = compressedLength;
+	_compressedImageBuffer[1] = compressedLength >> BYTE;
+	_compressedImageBuffer[2] = compressedLength >> 2*BYTE;
+
+	return SendMessage(_compressedImageBuffer, indexCompressed);
+}
+
+
+Server::~Server()
+{
+	if (_compressedImageBuffer != NULL)
+		delete[] _compressedImageBuffer;
 }
 
 void Server::sigchld_handler(int s)

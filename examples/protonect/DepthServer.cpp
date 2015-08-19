@@ -40,7 +40,9 @@
 #include <CUDA/Filter.h>
 
 #define PORT "3490"
-#define DEPTH_THRESHOLD (uchar) 100
+#define ROWS 424
+#define COLS 512
+#define KINECT_MAX_DEPTH 4500.0f
 
 bool protonect_shutdown = false;
 
@@ -77,13 +79,16 @@ void stopTiming()
 
 int main(int argc, char *argv[])
 {
+
 	if (argc < 2)
 	{
 		std::cout << "Usage: DepthServer <depth threshold in [mm]>" << std::endl;
 		return -1;
 	}
 
+
 	float depthThreshold = strtof(argv[1], NULL);
+
 	std::string program_path(argv[0]);
 	size_t executable_name_idx = program_path.rfind("Protonect");
 
@@ -115,19 +120,20 @@ int main(int argc, char *argv[])
 	libfreenect2::FrameMap frames;
 
 	cv::moveWindow("Server",584,624) ;
-	float depthFiltered[512*424]; 
 
 	dev->setIrAndDepthFrameListener(&listener);
 	dev->start();
 
 	std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
 	std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
-	cv::Mat depthConverted ;
 
-	Server server(PORT);
+	cv::Mat currentDepth;
+	cv::Mat previousDepth;
+	float depthFiltered[ROWS*COLS];
+
+	Server server(PORT, ROWS, COLS);
 	std::cout << "Successfully initialized server" << std::endl;
 	server.WaitForClient();
-
 	int frameCount = 0;
 
 	while(!protonect_shutdown)
@@ -137,11 +143,21 @@ int main(int argc, char *argv[])
 		libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
 		cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
+
 		FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, depthThreshold);
-		server.SendMatrix(depthFiltered, depth->height, depth->width);  
+
+		depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) / depthThreshold;
+		depthMat.convertTo(currentDepth, CV_8UC1, 255, 0);
+	
+		if (frameCount > 0)
+			server.SendCompressed(previousDepth.data, currentDepth.data);
+		else
+			server.SendMatrix((char*)currentDepth.data);
 
 		frameCount++;
 		protonect_shutdown = protonect_shutdown || (frameCount > 1000); // shutdown on escape
+
+		previousDepth = currentDepth.clone();
 
 		listener.release(frames);
 		stopTiming() ;
