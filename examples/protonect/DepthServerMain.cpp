@@ -81,8 +81,16 @@ void stopTiming()
 
 int main(int argc, char *argv[])
 {
+	if (argc < 2)
+	{
+		std::cout << "Usage: " << argv[0] << "timeToRun [-c]" << std::endl;
+		return -1;
+	}
+
+	int timeToRun = atoi(argv[1]);
+
 	bool useCompression = false;
-	if (argc == 2)
+	if (argc == 3)
 		useCompression = true;	
 	
 	std::string program_path(argv[0]);
@@ -129,7 +137,7 @@ int main(int argc, char *argv[])
 	DepthServer server(PORT, useCompression, ROWS, COLS);
 	std::cout << "Successfully initialized server" << std::endl;
 	server.WaitForClient();
-	int frameCount = 0;
+	double runTime = 0;
 
 	while(!protonect_shutdown)
 	{
@@ -146,11 +154,13 @@ int main(int argc, char *argv[])
 	
 		int numBytesSent = server.SendMatrix(currentDepth.data);
 
-		frameCount++;
-		protonect_shutdown = protonect_shutdown || (frameCount > 1000) || !numBytesSent; // shutdown on escape
+		protonect_shutdown = protonect_shutdown || (runTime >= timeToRun) || !numBytesSent; // shutdown on escape
 
 		listener.release(frames);
 		stopTiming();
+
+		runTime += (cv::getTickCount() - timing_current_start) / cv::getTickFrequency();
+
 	}
 
 	// TODO: restarting ir stream doesn't work!
