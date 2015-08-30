@@ -30,6 +30,14 @@ DepthServer::DepthServer(const char* portNumber, bool useCompression, int rowCou
 
 int  DepthServer::SendMatrix(const uchar* matrix)
 {
+	// inform the client about the type of depth stream - with or without connection
+	if (_expectingFirstFrame)
+	{
+		int numBytesSent = SendMessage((char*)&_usingCompression, sizeof(bool));
+		if (numBytesSent != sizeof(bool))
+			return 0;
+	}
+
 	if (_usingCompression)
 		return SendMatrixCompressed(matrix);
 	else	

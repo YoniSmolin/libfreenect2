@@ -42,8 +42,9 @@
 #define PORT "3490"
 #define ROWS 424
 #define COLS 512
-#define KINECT_MAX_DEPTH 4500.0f
-#define COMPRESSION_FLAG true
+
+#define DEPTH_MIN 500.0f // [mm]
+#define DEPTH_MAX 3050.0f // [mm]
 
 bool protonect_shutdown = false;
 
@@ -80,16 +81,10 @@ void stopTiming()
 
 int main(int argc, char *argv[])
 {
-
-	if (argc < 2)
-	{
-		std::cout << "Usage: DepthServer <depth threshold in [mm]>" << std::endl;
-		return -1;
-	}
-
-
-	float depthThreshold = strtof(argv[1], NULL);
-
+	bool useCompression = false;
+	if (argc == 2)
+		useCompression = true;	
+	
 	std::string program_path(argv[0]);
 	size_t executable_name_idx = program_path.rfind("Protonect");
 
@@ -120,7 +115,7 @@ int main(int argc, char *argv[])
 	libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Depth); //listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
 	libfreenect2::FrameMap frames;
 
-	cv::moveWindow("Server",584,624) ;
+	cv::moveWindow("Server",585,624) ;
 
 	dev->setIrAndDepthFrameListener(&listener);
 	dev->start();
@@ -131,7 +126,7 @@ int main(int argc, char *argv[])
 	cv::Mat currentDepth;
 	float depthFiltered[ROWS*COLS];
 
-	DepthServer server(PORT, COMPRESSION_FLAG, ROWS, COLS);
+	DepthServer server(PORT, useCompression, ROWS, COLS);
 	std::cout << "Successfully initialized server" << std::endl;
 	server.WaitForClient();
 	int frameCount = 0;
@@ -144,15 +139,15 @@ int main(int argc, char *argv[])
 
 		cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
 
-		FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, depthThreshold);
+		FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, DEPTH_MAX);
 
-		depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) / depthThreshold;
+		depthMat = (cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) - DEPTH_MIN ) / (DEPTH_MAX - DEPTH_MIN);
 		depthMat.convertTo(currentDepth, CV_8UC1, 255, 0);
 	
-		server.SendMatrix(currentDepth.data);
+		int numBytesSent = server.SendMatrix(currentDepth.data);
 
 		frameCount++;
-		protonect_shutdown = protonect_shutdown || (frameCount > 1000); // shutdown on escape
+		protonect_shutdown = protonect_shutdown || (frameCount > 1000) || !numBytesSent; // shutdown on escape
 
 		listener.release(frames);
 		stopTiming();
