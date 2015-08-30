@@ -16,12 +16,11 @@ class Server
 		void WaitForClient();
 		int  SendMessage(const char* message, int length);
 		void CloseConnection();
-		int  SendMatrix(const char* matrix, int rowCount, int colCount);
-
+				
+		~Server();
 	private:
 		void sigchld_handler(int s);
 		void* get_in_addr(struct sockaddr *sa);
-
 };
 
 #endif

@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -24,7 +23,7 @@
 using namespace std;
 
 Server::Server(const char* portNumber) : BACKLOG(1)
-{ 
+{
 	struct addrinfo hints, *servinfo, *p; 
 	int yes=1; 
 	int rv;
@@ -88,14 +87,14 @@ void Server::WaitForClient()
 	}
 
 	/* This will be relevant when we expect more than one client:
-	sa.sa_handler = sigchld_handler; // reap all dead processes
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-		perror("sigaction");
-		exit(1);
-	} */
-	
+	   sa.sa_handler = sigchld_handler; // reap all dead processes
+	   sigemptyset(&sa.sa_mask);
+	   sa.sa_flags = SA_RESTART;
+	   if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+	   perror("sigaction");
+	   exit(1);
+	   } */
+
 	cout << "server: waiting for connection..." << endl;
 
 	sin_size = sizeof their_addr;
@@ -108,42 +107,38 @@ void Server::WaitForClient()
 
 	inet_ntop(their_addr.ss_family,	get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
 	cout << "server: got connection from " << s << endl;
-	
+
 	close(_sockfd);
-	
+
 	_sockfd = newfd; // TODO: in the future, we would like to keep both sockets open,
-			 //       one for listening and the other for sending data. 
+	//       one for listening and the other for sending data. 
 }
 
 int  Server::SendMessage(const char* message, int length)
 {
-	int bytesSent = send(_sockfd, message, length, 0);
-	if (bytesSent == -1)
-	{ 
-		perror("send");
-		exit(1);
-	}
-	
-	return bytesSent;
-}
-
-int  Server::SendMatrix(const char* matrix, int rowCount, int colCount)
-{
-	int bytesSent = 0, bytesRemaining = rowCount * colCount;
-
-	while(bytesSent	< bytesRemaining)
+	int totalSent = 0;
+	while(totalSent < length)
 	{
-		bytesSent += SendMessage(matrix + bytesSent, bytesRemaining);
-		bytesRemaining -= bytesSent;
+		int bytesSent =	send(_sockfd, message + totalSent, length, 0);
+		if (bytesSent == -1)
+		{ 
+			perror("send");
+			exit(1);
+		}
+		totalSent += bytesSent;
 	}
 
-	return bytesSent;
+	return totalSent;
 }
-
 
 void Server::CloseConnection()
 {
 	close(_sockfd);
+}
+
+Server::~Server()
+{
+	CloseConnection();
 }
 
 void Server::sigchld_handler(int s)

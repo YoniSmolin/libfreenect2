@@ -96,6 +96,7 @@ SET(SOURCES
   ${RESOURCES_INC_FILE}
 
   src/Server.cpp
+  src/DepthServer.cpp
 )
 
 SET(LIBRARIES
@@ -117,10 +118,10 @@ IF(ENABLE_TEGRA_JPEG AND EXISTS "/etc/nv_tegra_release")
     MESSAGE(FATAL_ERROR "Did not find Tegra JPEG library")
   ENDIF(NOT TEGRA_JPEG_LIBRARY)
 
-  INCLUDE_DIRECTORIES("${MY_DIR}/../../depends/nv_headers")
+  INCLUDE_DIRECTORIES("${MY_DIR}/../../depends")
   CHECK_SYMBOL_EXISTS(TEGRA_ACCELERATE "${MY_DIR}/../../depends/nv_headers/jconfig.h" TEGRA_JPEG_HEADERS)
   IF(NOT TEGRA_JPEG_HEADERS)
-    MESSAGE(FATAL_ERROR "Did not find headers for Tegra JPEG library in ${MY_DIR}/../../depends/gstjpeg_src/nv_headers")
+    MESSAGE(FATAL_ERROR "Did not find headers for Tegra JPEG library in ${MY_DIR}/../../depends/nv_headers")
   ENDIF(NOT TEGRA_JPEG_HEADERS)
 
   MESSAGE(STATUS "Found Tegra hardware accelerated JPEG support")
@@ -206,9 +207,9 @@ ADD_EXECUTABLE(Protonect  Protonect.cpp)
   
 TARGET_LINK_LIBRARIES(Protonect  freenect2)
 
-ADD_EXECUTABLE(DepthServer  DepthServer.cpp)
+ADD_EXECUTABLE(DepthServerMain  DepthServerMain.cpp)
 
-TARGET_LINK_LIBRARIES(DepthServer  freenect2)
+TARGET_LINK_LIBRARIES(DepthServerMain  freenect2)
 
 ADD_EXECUTABLE(DepthFiltered  DepthFiltered.cpp)
 
