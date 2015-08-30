@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -21,15 +20,10 @@
 
 #include <networking/Server.hpp>
 
-#define BYTES_PER_COMPRESSED_PIXEL 4
-#define BYTES_IN_HEADER 3
-#define BYTE 8
-#define BITS_TWO_TO_NINE 0x000001fe
-
 using namespace std;
 
-Server::Server(const char* portNumber, int rowCount, int colCount) : BACKLOG(1), _rows(rowCount), _columns(colCount), _compressedImageBuffer(NULL)
-{ 
+Server::Server(const char* portNumber) : BACKLOG(1)
+{
 	struct addrinfo hints, *servinfo, *p; 
 	int yes=1; 
 	int rv;
@@ -93,14 +87,14 @@ void Server::WaitForClient()
 	}
 
 	/* This will be relevant when we expect more than one client:
-	sa.sa_handler = sigchld_handler; // reap all dead processes
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-		perror("sigaction");
-		exit(1);
-	} */
-	
+	   sa.sa_handler = sigchld_handler; // reap all dead processes
+	   sigemptyset(&sa.sa_mask);
+	   sa.sa_flags = SA_RESTART;
+	   if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+	   perror("sigaction");
+	   exit(1);
+	   } */
+
 	cout << "server: waiting for connection..." << endl;
 
 	sin_size = sizeof their_addr;
@@ -113,11 +107,11 @@ void Server::WaitForClient()
 
 	inet_ntop(their_addr.ss_family,	get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
 	cout << "server: got connection from " << s << endl;
-	
+
 	close(_sockfd);
-	
+
 	_sockfd = newfd; // TODO: in the future, we would like to keep both sockets open,
-			 //       one for listening and the other for sending data. 
+	//       one for listening and the other for sending data. 
 }
 
 int  Server::SendMessage(const char* message, int length)
@@ -137,64 +131,14 @@ int  Server::SendMessage(const char* message, int length)
 	return totalSent;
 }
 
-int  Server::SendMatrix(const char* matrix)
-{
-	return SendMessage(matrix, _rows * _columns);
-}
-
-int  Server::SendMatrix(const float* matrix)
-{
-	if (sizeof(float) != 4)
-		fprintf(stderr, "Server::SendMatrix - Float size must be 32 bits\n");
-
-	return SendMessage((char*) matrix, _rows * _columns * sizeof(float));
-}
-
 void Server::CloseConnection()
 {
 	close(_sockfd);
 }
 
-int  Server::SendCompressed(const uchar* reference, uchar* toSend)
-{
-	if (_compressedImageBuffer == NULL)
-		_compressedImageBuffer = new char[_rows * _columns * BYTES_PER_COMPRESSED_PIXEL + BYTES_IN_HEADER];
-
-	int indexCompressed = BYTES_IN_HEADER;
-
-	// compress data
-	for (int row = 0; row < _rows; row++)
-	{
-		for (int col = 0; col < _columns; col++)
-		{
-			int indexOriginal = row * _columns + col;
-			int difference = (int)toSend[indexOriginal] - (int)reference[indexOriginal]; // the casts here are important in order to preserve sign information
-
-			if (difference != 0)
-			{
-				_compressedImageBuffer[indexCompressed++] = indexOriginal;      // store 8 LSBs 
-				_compressedImageBuffer[indexCompressed++] = indexOriginal >> BYTE; // store following (more significant) 8 LSBs
-				_compressedImageBuffer[indexCompressed++] = (indexOriginal >> 2*BYTE) + ((difference & 1) << (BYTE - 1)); // final 2 bits of the index and the LSB of the difference are stored here
-				_compressedImageBuffer[indexCompressed++] = (difference & BITS_TWO_TO_NINE) >> 1; // the rest 8 bits of the difference
-			}
-
-		}
-	}
-
-	// prepare image header - contains the length of the compressed image
-	int compressedLength = indexCompressed - BYTES_IN_HEADER;
-	_compressedImageBuffer[0] = compressedLength;
-	_compressedImageBuffer[1] = compressedLength >> BYTE;
-	_compressedImageBuffer[2] = compressedLength >> 2*BYTE;
-
-	return SendMessage(_compressedImageBuffer, indexCompressed);
-}
-
-
 Server::~Server()
 {
-	if (_compressedImageBuffer != NULL)
-		delete[] _compressedImageBuffer;
+	CloseConnection();
 }
 
 void Server::sigchld_handler(int s)

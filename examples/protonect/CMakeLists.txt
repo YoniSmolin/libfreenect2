@@ -96,6 +96,7 @@ SET(SOURCES
   ${RESOURCES_INC_FILE}
 
   src/Server.cpp
+  src/DepthServer.cpp
 )
 
 SET(LIBRARIES
@@ -206,9 +207,9 @@ ADD_EXECUTABLE(Protonect  Protonect.cpp)
   
 TARGET_LINK_LIBRARIES(Protonect  freenect2)
 
-ADD_EXECUTABLE(DepthServer  DepthServer.cpp)
+ADD_EXECUTABLE(DepthServerMain  DepthServerMain.cpp)
 
-TARGET_LINK_LIBRARIES(DepthServer  freenect2)
+TARGET_LINK_LIBRARIES(DepthServerMain  freenect2)
 
 ADD_EXECUTABLE(DepthFiltered  DepthFiltered.cpp)
 

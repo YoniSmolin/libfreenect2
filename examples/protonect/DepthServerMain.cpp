@@ -35,7 +35,7 @@
 #include <libfreenect2/frame_listener_impl.h>
 #include <libfreenect2/threading.h>
 
-#include <networking/Server.hpp>
+#include <networking/DepthServer.hpp>
 
 #include <CUDA/Filter.h>
 
@@ -43,6 +43,7 @@
 #define ROWS 424
 #define COLS 512
 #define KINECT_MAX_DEPTH 4500.0f
+#define COMPRESSION_FLAG true
 
 bool protonect_shutdown = false;
 
@@ -128,10 +129,9 @@ int main(int argc, char *argv[])
 	std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
 
 	cv::Mat currentDepth;
-	cv::Mat previousDepth;
 	float depthFiltered[ROWS*COLS];
 
-	Server server(PORT, ROWS, COLS);
+	DepthServer server(PORT, COMPRESSION_FLAG, ROWS, COLS);
 	std::cout << "Successfully initialized server" << std::endl;
 	server.WaitForClient();
 	int frameCount = 0;
@@ -149,15 +149,10 @@ int main(int argc, char *argv[])
 		depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) / depthThreshold;
 		depthMat.convertTo(currentDepth, CV_8UC1, 255, 0);
 	
-		if (frameCount > 0)
-			server.SendCompressed(previousDepth.data, currentDepth.data);
-		else
-			server.SendMatrix((char*)currentDepth.data);
+		server.SendMatrix(currentDepth.data);
 
 		frameCount++;
 		protonect_shutdown = protonect_shutdown || (frameCount > 1000); // shutdown on escape
-
-		previousDepth = currentDepth.clone();
 
 		listener.release(frames);
 		stopTiming() ;
