@@ -46,6 +46,8 @@
 #define DEPTH_MIN 500.0f // [mm]
 #define DEPTH_MAX 3050.0f // [mm]
 
+#define MEDIAN_FILTER_SIZE 3
+
 bool protonect_shutdown = false;
 
 void sigint_handler(int s)
@@ -83,7 +85,7 @@ int main(int argc, char *argv[])
 {
 	if (argc < 2 || (argc == 3 && strcmp(argv[2],"-c") != 0))
 	{
-		std::cout << "Usage: " << argv[0] << "timeToRun [-c]" << std::endl;
+		std::cout << "Usage: " << argv[0] << " timeToRun [-c]" << std::endl;
 		return -1;
 	}
 
@@ -132,6 +134,7 @@ int main(int argc, char *argv[])
 	std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
 
 	cv::Mat currentDepth;
+	cv::Mat depthDenoised(ROWS, COLS, CV_8UC1);
 	float depthFiltered[ROWS*COLS];
 
 	DepthServer server(PORT, useCompression, ROWS, COLS);
@@ -152,7 +155,9 @@ int main(int argc, char *argv[])
 		depthMat = (cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) - DEPTH_MIN ) / (DEPTH_MAX - DEPTH_MIN);
 		depthMat.convertTo(currentDepth, CV_8UC1, 255, 0);
 	
-		int numBytesSent = server.SendMatrix(currentDepth.data);
+	 	cv:medianBlur(currentDepth, depthDenoised, MEDIAN_FILTER_SIZE);	
+
+		int numBytesSent = server.SendMatrix(depthDenoised.data);
 
 		protonect_shutdown = protonect_shutdown || (runTime >= timeToRun) || !numBytesSent; // shutdown on escape
 
