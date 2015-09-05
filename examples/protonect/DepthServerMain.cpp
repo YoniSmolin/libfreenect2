@@ -80,21 +80,40 @@ void stopTiming()
 	}
 }
 
+void printProgramUsage(char* programName)
+{
+	std::cout << "Usage: " << programName << " timeToRun [-c] [-f]" << std::endl;
+}
 
 int main(int argc, char *argv[])
 {
-	if (argc < 2 || (argc == 3 && strcmp(argv[2],"-c") != 0))
+	// handle input parameters
+	bool useCompression = false;
+ 	bool performFiltering = false;
+
+	if (argc < 2 || argc > 4)
 	{
-		std::cout << "Usage: " << argv[0] << " timeToRun [-c]" << std::endl;
+		printProgramUsage(argv[0]);
 		return -1;
 	}
 
 	int timeToRun = atoi(argv[1]);
 
-	bool useCompression = false;
-	if (argc == 3)
-		useCompression = true;	
-	
+	for(int i = 2; i < argc; i++)
+	{
+		if (!strcmp(argv[i],"-c") || !strcmp(argv[i],"-f"))
+			printProgramUsage(argv[0]);
+		switch(argv[i][1])
+		{
+			case 'c': useCompression = true;
+			break;
+			case 'f': performFiltering = true;
+			break;
+			default:
+			break;
+		}
+	}
+
 	std::string program_path(argv[0]);
 	size_t executable_name_idx = program_path.rfind("Protonect");
 
@@ -155,9 +174,15 @@ int main(int argc, char *argv[])
 		depthMat = (cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) - DEPTH_MIN ) / (DEPTH_MAX - DEPTH_MIN);
 		depthMat.convertTo(currentDepth, CV_8UC1, 255, 0);
 	
-	 	cv:medianBlur(currentDepth, depthDenoised, MEDIAN_FILTER_SIZE);	
+		cv::Mat matrixToSend = currentDepth;
 
-		int numBytesSent = server.SendMatrix(depthDenoised.data);
+		if (performFiltering)
+		{
+			cv:medianBlur(currentDepth, depthDenoised, MEDIAN_FILTER_SIZE);	
+			matrixToSend = depthDenoised;
+		}
+
+		int numBytesSent = server.SendMatrix(matrixToSend.data);
 
 		protonect_shutdown = protonect_shutdown || (runTime >= timeToRun) || !numBytesSent; // shutdown on escape
 
