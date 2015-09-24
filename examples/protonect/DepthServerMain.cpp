@@ -82,13 +82,13 @@ void stopTiming()
 
 void printProgramUsage(char* programName)
 {
-	std::cout << "Usage: " << programName << " timeToRun [-c] [-f]" << std::endl;
+	std::cout << "Usage: " << programName << " timeToRun [-delta] [-PNG] [-f]" << std::endl;
 }
 
 int main(int argc, char *argv[])
 {
 	// handle input parameters
-	bool useCompression = false;
+	int compressionType = NO_COMPRESSION;
  	bool performFiltering = false;
 
 	if (argc < 2 || argc > 4)
@@ -105,12 +105,14 @@ int main(int argc, char *argv[])
 			printProgramUsage(argv[0]);
 		switch(argv[i][1])
 		{
-			case 'c': useCompression = true;
-			break;
+			case 'd': compressionType = DELTA_COMPRESSION;
+				  break;
+			case 'P': compressionType = PNG_COMPRESSION;
+				  break;
 			case 'f': performFiltering = true;
-			break;
+				  break;
 			default:
-			break;
+				  break;
 		}
 	}
 
@@ -156,24 +158,26 @@ int main(int argc, char *argv[])
 	cv::Mat depthDenoised(ROWS, COLS, CV_8UC1);
 	float depthFiltered[ROWS*COLS];
 
-	DepthServer server(PORT, useCompression, ROWS, COLS);
+	DepthServer server(PORT, compressionType, ROWS, COLS);
 	std::cout << "Successfully initialized server" << std::endl;
 	server.WaitForClient();
 	double runTime = 0;
 
 	while(!protonect_shutdown)
 	{
-		startTiming() ;
+		startTiming();
+		
+		// obtain frame from libfreenect runtime - 4 bytes per pixel - values are floating point in units of [mm]
 		listener.waitForNewFrame(frames);
 		libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
-
 		cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
 
+		// filter the frame in CUDA to remove values outside of the desired range
 		FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, DEPTH_MAX);
 
+		// map pixel values to 2-byte values in [0,2^(16-1)]
 		depthMat = (cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) - DEPTH_MIN ) / (DEPTH_MAX - DEPTH_MIN);
 		depthMat.convertTo(currentDepth, CV_8UC1, 255, 0);
-	
 		cv::Mat matrixToSend = currentDepth;
 
 		if (performFiltering)
@@ -188,9 +192,7 @@ int main(int argc, char *argv[])
 
 		listener.release(frames);
 		stopTiming();
-
 		runTime += (cv::getTickCount() - timing_current_start) / cv::getTickFrequency();
-
 	}
 
 	// TODO: restarting ir stream doesn't work!

@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
 		libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
 		cv::Mat depthMat = (cv::Mat(depth->height, depth->width, CV_32FC1, depth->data) - DEPTH_MIN ) / (DEPTH_MAX - DEPTH_MIN);
-		depthMat.convertTo(depthMat, CV_16UC1, 65536, 0);
+		depthMat.convertTo(depthMat, CV_16UC1, 65535, 0);
 
 		sprintf(fileName, "%s/%d.png", argv[1], frameNumber);
 		cv::imwrite(fileName, depthMat);

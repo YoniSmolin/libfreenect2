@@ -207,11 +207,11 @@ ADD_EXECUTABLE(Protonect  Protonect.cpp)
   
 TARGET_LINK_LIBRARIES(Protonect  freenect2)
 
-ADD_EXECUTABLE(DepthServerMain  DepthServerMain.cpp)
+ADD_EXECUTABLE(DepthServer DepthServerMain.cpp)
 
 ADD_EXECUTABLE(DepthClipRecorder DepthClipRecorderMain.cpp)
 
-TARGET_LINK_LIBRARIES(DepthServerMain  freenect2)
+TARGET_LINK_LIBRARIES(DepthServer  freenect2)
 
 TARGET_LINK_LIBRARIES(DepthClipRecorder freenect2)
 

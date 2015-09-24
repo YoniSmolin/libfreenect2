@@ -9,8 +9,10 @@
 
 #include <iostream>
 #include <string.h>
-
+#include <stdexcept> // exceptions
 #include <networking/DepthServer.hpp>
+
+#include <opencv2/highgui/highgui.hpp> // PNG compression
 
 #define BYTES_PER_COMPRESSED_PIXEL 4
 #define BYTES_IN_HEADER 3
@@ -18,10 +20,11 @@
 #define BITS_TWO_TO_NINE 0x000001fe
 
 using namespace std;
+using namespace cv;
 
-DepthServer::DepthServer(const char* portNumber, bool useCompression, int rowCount, int colCount) : Server(portNumber), _rows(rowCount), _columns(colCount), _usingCompression(useCompression), _previousFrame(NULL), _expectingFirstFrame(true)
+DepthServer::DepthServer(const char* portNumber, int compressionType, int rowCount, int colCount) : Server(portNumber), _rows(rowCount), _columns(colCount), _compressionType(compressionType), _previousFrame(NULL), _expectingFirstFrame(true)
 {
-	if (useCompression)
+	if (_compressionType == DELTA_COMPRESSION || _compressionType == PNG_COMPRESSION)
 	{	
 		_compressedImageBuffer = new char[_rows * _columns * BYTES_PER_COMPRESSED_PIXEL + BYTES_IN_HEADER];
 		_previousFrame = new uchar[_rows * _columns];
@@ -30,18 +33,22 @@ DepthServer::DepthServer(const char* portNumber, bool useCompression, int rowCou
 
 int  DepthServer::SendMatrix(const uchar* matrix)
 {
-	// inform the client about the type of depth stream - with or without connection
+	// inform the client about the type of depth stream - what type of compression is used ?
 	if (_expectingFirstFrame)
 	{
-		int numBytesSent = SendMessage((char*)&_usingCompression, sizeof(bool));
-		if (numBytesSent != sizeof(bool))
+		int expectedLength = sizeof(_compressionType);
+		int numBytesSent = SendMessage(&_compressionType, expectedLength);
+		if (numBytesSent != expectedLength)
 			return 0;
 	}
 
-	if (_usingCompression)
-		return SendMatrixCompressed(matrix);
-	else	
-		return SendMessage((char*)matrix, _rows * _columns);
+	switch(_compressionType)
+	{
+		case NO_COMPRESSION:     return  SendMessage((char*)matrix, _rows * _columns);
+		case DELTA_COMPRESSION:  return	 SendMatrixCompressedWithDelta(matrix);
+		case PNG_COMPRESSION:    return  SendMatrixCompressedWithPNG(matrix);
+		deafault: throw runtime_error("Could not identify compression type");
+	}
 }
 
 int  DepthServer::SendMatrix(const float* matrix)
@@ -52,7 +59,7 @@ int  DepthServer::SendMatrix(const float* matrix)
 	return SendMessage((char*) matrix, _rows * _columns * sizeof(float));
 }
 
-int  DepthServer::SendMatrixCompressed(const uchar* toSend)
+int  DepthServer::SendMatrixCompressedWithDelta(const uchar* toSend)
 {
 	int numBytesSent = 0;
 
@@ -99,6 +106,24 @@ int  DepthServer::SendMatrixCompressed(const uchar* toSend)
 	return numBytesSent;
 }
 
+int  DepthServer::SendMatrixCompressedWithPNG(const uchar* toSend)
+{
+	Mat toSendMat = Mat(_rows, _columns, CV_8UC1, const_cast<uchar*>(toSend)); 
+
+	// wrap the compressed image buffer with a vector
+	vector<uchar> compressed(_compressedImageBuffer + BYTES_IN_HEADER, _compressedImageBuffer +_rows * _columns + BYTES_IN_HEADER);
+	// encode the image to PNG
+	imencode(".png", toSendMat, compressed);	
+	
+	// prepare the header
+	int compressedSize = compressed.size();
+	_compressedImageBuffer[0] = compressedSize;
+	_compressedImageBuffer[1] = compressedSize >> BYTE;
+	_compressedImageBuffer[2] = compressedSize >> 2*BYTE;
+
+	_expectingFirstFrame = false;
+	return SendMessage(_compressedImageBuffer, BYTES_IN_HEADER + compressedSize);
+}
 
 DepthServer::~DepthServer()
 {
