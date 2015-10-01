@@ -49,6 +49,8 @@ int  DepthServer::SendMatrix(const uchar* matrix)
 		case PNG_COMPRESSION:    return  SendMatrixCompressedWithPNG(matrix);
 		deafault: throw runtime_error("Could not identify compression type");
 	}
+
+	_expectingFirstFrame = false;
 }
 
 int  DepthServer::SendMatrix(const float* matrix)
@@ -64,10 +66,7 @@ int  DepthServer::SendMatrixCompressedWithDelta(const uchar* toSend)
 	int numBytesSent = 0;
 
 	if (_expectingFirstFrame)
-	{
-		_expectingFirstFrame = false;
 		numBytesSent =  SendMessage((char*) toSend, _rows * _columns);
-	}
 	else	
 	{	
 		int indexCompressed = BYTES_IN_HEADER;
@@ -111,7 +110,7 @@ int  DepthServer::SendMatrixCompressedWithPNG(const uchar* toSend)
 	Mat toSendMat = Mat(_rows, _columns, CV_8UC1, const_cast<uchar*>(toSend)); 
 
 	// wrap the compressed image buffer with a vector
-	vector<uchar> compressed(_compressedImageBuffer + BYTES_IN_HEADER, _compressedImageBuffer +_rows * _columns + BYTES_IN_HEADER);
+	vector<uchar> compressed;
 	// encode the image to PNG
 	imencode(".png", toSendMat, compressed);	
 	
@@ -121,7 +120,9 @@ int  DepthServer::SendMatrixCompressedWithPNG(const uchar* toSend)
 	_compressedImageBuffer[1] = compressedSize >> BYTE;
 	_compressedImageBuffer[2] = compressedSize >> 2*BYTE;
 
-	_expectingFirstFrame = false;
+	// prepare the body of the message
+	memcpy(_compressedImageBuffer + BYTES_IN_HEADER, compressed.data(), compressedSize);
+
 	return SendMessage(_compressedImageBuffer, BYTES_IN_HEADER + compressedSize);
 }
 

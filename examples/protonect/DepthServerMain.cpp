@@ -101,8 +101,11 @@ int main(int argc, char *argv[])
 
 	for(int i = 2; i < argc; i++)
 	{
-		if (!strcmp(argv[i],"-c") || !strcmp(argv[i],"-f"))
+		if ( strcmp(argv[i],"-delta") && strcmp(argv[i],"-PNG") && strcmp(argv[i],"-f") )
+		{
 			printProgramUsage(argv[0]);
+			return -1;
+		}
 		switch(argv[i][1])
 		{
 			case 'd': compressionType = DELTA_COMPRESSION;
@@ -175,7 +178,7 @@ int main(int argc, char *argv[])
 		// filter the frame in CUDA to remove values outside of the desired range
 		FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, DEPTH_MAX);
 
-		// map pixel values to 2-byte values in [0,2^(16-1)]
+		// map pixel values to 2-byte values in [0,(2^8)-1]
 		depthMat = (cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) - DEPTH_MIN ) / (DEPTH_MAX - DEPTH_MIN);
 		depthMat.convertTo(currentDepth, CV_8UC1, 255, 0);
 		cv::Mat matrixToSend = currentDepth;
