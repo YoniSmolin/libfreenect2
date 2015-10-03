@@ -40,7 +40,6 @@
 
 #include <CUDA/Filter.h>
 
-
 // constant defines
 #define PORT "3490"
 #define ROWS 424
@@ -50,7 +49,6 @@
 #define DEPTH_MAX 3050.0f // [mm]
 
 #define MEDIAN_FILTER_SIZE 3
-
 
 // globals
 bool protonect_shutdown = false;
@@ -90,6 +88,7 @@ void printProgramUsage(char* programName)
 {
 	std::cout << "Usage: " << programName << " timeToRun [-delta] [-PNG] [-f]" << std::endl;
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -177,7 +176,7 @@ int main(int argc, char *argv[])
 		// filter the frame in CUDA to remove values outside of the desired range
 		FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, DEPTH_MAX);
 
-		// map pixel values to 2-byte values in [0,(2^8)-1]
+		// map pixel values to 1-byte values in [0,(2^8)-1]
 		depthMat = (cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) - DEPTH_MIN ) / (DEPTH_MAX - DEPTH_MIN);
 		depthMat.convertTo(currentDepth, CV_8UC1, 255, 0);
 		cv::Mat matrixToSend = currentDepth;
