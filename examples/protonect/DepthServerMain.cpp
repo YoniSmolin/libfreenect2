@@ -1,3 +1,4 @@
+// License
 /*
  * This file is part of the OpenKinect Project. http://www.openkinect.org
  *
@@ -24,7 +25,7 @@
  * either License.
  */
 
-
+// includes
 #include <iostream>
 #include <signal.h>
 
@@ -39,6 +40,8 @@
 
 #include <CUDA/Filter.h>
 
+
+// constant defines
 #define PORT "3490"
 #define ROWS 424
 #define COLS 512
@@ -48,19 +51,21 @@
 
 #define MEDIAN_FILTER_SIZE 3
 
+
+// globals
 bool protonect_shutdown = false;
 
+double timing_acc;
+double timing_acc_n;
+double timing_current_start;
+
+// signal handlers
 void sigint_handler(int s)
 {
 	protonect_shutdown = true;
 }
 
-double timing_acc;
-double timing_acc_n;
-
-double timing_current_start;
-
-
+// timing and telemtry aux functions	
 void startTiming()
 {
 	timing_current_start = cv::getTickCount();
@@ -80,6 +85,7 @@ void stopTiming()
 	}
 }
 
+// print usage aux function
 void printProgramUsage(char* programName)
 {
 	std::cout << "Usage: " << programName << " timeToRun [-delta] [-PNG] [-f]" << std::endl;
@@ -87,7 +93,7 @@ void printProgramUsage(char* programName)
 
 int main(int argc, char *argv[])
 {
-	// handle input parameters
+	// process input parameters
 	int compressionType = NO_COMPRESSION;
  	bool performFiltering = false;
 
@@ -119,17 +125,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	std::string program_path(argv[0]);
-	size_t executable_name_idx = program_path.rfind("Protonect");
-
-	std::string binpath = "/";
-
-	if(executable_name_idx != std::string::npos)
-	{
-		binpath = program_path.substr(0, executable_name_idx);
-	}
-
-
+	// initalize device and frame listener objects
 	libfreenect2::Freenect2 freenect2;
 	libfreenect2::Freenect2Device *dev = freenect2.openDefaultDevice();
 
@@ -139,6 +135,16 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
+	std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
+
+	libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Depth); //listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
+	libfreenect2::FrameMap frames;
+
+	dev->setIrAndDepthFrameListener(&listener);
+	dev->start();
+
+	// initialize global variables
 	timing_acc = 0.0;
 	timing_acc_n = 0.0;
 	timing_current_start = 0.0;
@@ -146,26 +152,19 @@ int main(int argc, char *argv[])
 	signal(SIGINT,sigint_handler);
 	protonect_shutdown = false;
 
-	libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Depth); //listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
-	libfreenect2::FrameMap frames;
-
+	// initialize main loop variables	
 	cv::moveWindow("Server",585,624) ;
-
-	dev->setIrAndDepthFrameListener(&listener);
-	dev->start();
-
-	std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
-	std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
-
 	cv::Mat currentDepth;
 	cv::Mat depthDenoised(ROWS, COLS, CV_8UC1);
 	float depthFiltered[ROWS*COLS];
+	double runTime = 0;
 
+	// launch the server and wait for a client
 	DepthServer server(PORT, compressionType, ROWS, COLS);
 	std::cout << "Successfully initialized server" << std::endl;
 	server.WaitForClient();
-	double runTime = 0;
-
+	
+	// main loop
 	while(!protonect_shutdown)
 	{
 		startTiming();
@@ -198,6 +197,7 @@ int main(int argc, char *argv[])
 		runTime += (cv::getTickCount() - timing_current_start) / cv::getTickFrequency();
 	}
 
+	// wrap-up
 	// TODO: restarting ir stream doesn't work!
 	// TODO: bad things will happen, if frame listeners are freed before dev->stop() :(
 	dev->stop();
