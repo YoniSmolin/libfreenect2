@@ -97,6 +97,7 @@ SET(SOURCES
 
   src/Server.cpp
   src/DepthServer.cpp
+  src/Timer.cpp
 )
 
 SET(LIBRARIES

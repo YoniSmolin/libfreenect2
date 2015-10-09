@@ -39,6 +39,7 @@
 #include <networking/DepthServer.hpp>
 
 #include <CUDA/Filter.h>
+#include <libfreenect2/Timer.hpp>
 
 // constant defines
 #define PORT "3490"
@@ -49,6 +50,8 @@
 #define DEPTH_MAX 3050.0f // [mm]
 
 #define MEDIAN_FILTER_SIZE 3
+
+#define TIMER_WINDOW_SIZE 100
 
 // globals
 bool protonect_shutdown = false;
@@ -158,6 +161,10 @@ int main(int argc, char *argv[])
 	float depthFiltered[ROWS*COLS];
 	double runTime = 0;
 
+	// initialize Timer (for profiling)
+	const char* sectionNames[] = { "Acquire Frame", "Filter Raw Frame", "Median Filter", "Send to client", "End of Iteration"};
+	Timer timer(sectionNames, 5, TIMER_WINDOW_SIZE);
+
 	// launch the server and wait for a client
 	DepthServer server(PORT, compressionType, ROWS, COLS);
 	std::cout << "Successfully initialized server" << std::endl;
@@ -166,34 +173,38 @@ int main(int argc, char *argv[])
 	// main loop
 	while(!protonect_shutdown)
 	{
-		startTiming();
+		timer.FrameStart();
 		
 		// obtain frame from libfreenect runtime - 4 bytes per pixel - values are floating point in units of [mm]
 		listener.waitForNewFrame(frames);
 		libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 		cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
-
+		timer.SectionEnd();
+		
 		// filter the frame in CUDA to remove values outside of the desired range
 		FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, DEPTH_MAX);
-
+		
 		// map pixel values to 1-byte values in [0,(2^8)-1]
 		depthMat = (cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) - DEPTH_MIN ) / (DEPTH_MAX - DEPTH_MIN);
 		depthMat.convertTo(currentDepth, CV_8UC1, 255, 0);
 		cv::Mat matrixToSend = currentDepth;
+		timer.SectionEnd();
 
 		if (performFiltering)
 		{
 			cv:medianBlur(currentDepth, depthDenoised, MEDIAN_FILTER_SIZE);	
 			matrixToSend = depthDenoised;
 		}
+		timer.SectionEnd();
 
 		int numBytesSent = server.SendMatrix(matrixToSend.data);
+		timer.SectionEnd();
 
-		protonect_shutdown = protonect_shutdown || (runTime >= timeToRun) || !numBytesSent; // shutdown on escape
+		protonect_shutdown = protonect_shutdown || (timer.GetCurrentTime() >= timeToRun) || !numBytesSent; // shutdown on escape
 
 		listener.release(frames);
 		stopTiming();
-		runTime += (cv::getTickCount() - timing_current_start) / cv::getTickFrequency();
+		timer.SectionEnd();
 	}
 
 	// wrap-up
