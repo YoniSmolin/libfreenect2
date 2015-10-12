@@ -47,7 +47,8 @@
 #define COLS 512
 
 #define DEPTH_MIN 500.0f // [mm]
-#define DEPTH_MAX 3050.0f // [mm]
+#define DEPTH_MAX 4000.0f // [mm]
+#define DEPTH_RESOLUTION 2.5f // [mm]
 
 #define MEDIAN_FILTER_SIZE 3
 
@@ -56,76 +57,29 @@
 // globals
 bool protonect_shutdown = false;
 
-double timing_acc;
-double timing_acc_n;
-double timing_current_start;
-
 // signal handlers
 void sigint_handler(int s)
 {
 	protonect_shutdown = true;
 }
 
-// timing and telemtry aux functions	
-void startTiming()
-{
-	timing_current_start = cv::getTickCount();
-}
-
-void stopTiming()
-{
-	timing_acc += (cv::getTickCount() - timing_current_start) / cv::getTickFrequency();
-	timing_acc_n += 1.0;
-
-	if(timing_acc_n >= 100.0)
-	{
-		double avg = (timing_acc / timing_acc_n);
-		std::cout << "[FPS] avg. time: " << (avg * 1000) << "ms -> ~" << (1.0/avg) << "Hz" << std::endl;
-		timing_acc = 0.0;
-		timing_acc_n = 0.0;
-	}
-}
-
 // print usage aux function
 void printProgramUsage(char* programName)
 {
-	std::cout << "Usage: " << programName << " timeToRun [-delta] [-PNG] [-f]" << std::endl;
+	std::cout << "Usage: " << programName << " timeToRun" << std::endl;
 }
 
 
 int main(int argc, char *argv[])
 {
 	// process input parameters
-	int compressionType = NO_COMPRESSION;
- 	bool performFiltering = false;
-
-	if (argc < 2 || argc > 4)
+	if (argc != 2)
 	{
 		printProgramUsage(argv[0]);
 		return -1;
 	}
 
 	int timeToRun = atoi(argv[1]);
-
-	for(int i = 2; i < argc; i++)
-	{
-		if ( strcmp(argv[i],"-delta") && strcmp(argv[i],"-PNG") && strcmp(argv[i],"-f") )
-		{
-			printProgramUsage(argv[0]);
-			return -1;
-		}
-		switch(argv[i][1])
-		{
-			case 'd': compressionType = DELTA_COMPRESSION;
-				  break;
-			case 'P': compressionType = PNG_COMPRESSION;
-				  break;
-			case 'f': performFiltering = true;
-				  break;
-			default:
-				  break;
-		}
-	}
 
 	// initalize device and frame listener objects
 	libfreenect2::Freenect2 freenect2;
@@ -147,10 +101,6 @@ int main(int argc, char *argv[])
 	dev->start();
 
 	// initialize global variables
-	timing_acc = 0.0;
-	timing_acc_n = 0.0;
-	timing_current_start = 0.0;
-
 	signal(SIGINT,sigint_handler);
 	protonect_shutdown = false;
 
@@ -162,11 +112,11 @@ int main(int argc, char *argv[])
 	double runTime = 0;
 
 	// initialize Timer (for profiling)
-	const char* sectionNames[] = { "Acquire Frame", "Filter Raw Frame", "Median Filter", "Send to client", "End of Iteration"};
+	const char* sectionNames[] = { "Acquire Frame", "Filter Raw Frame", "Quantize", "Send to client", "End of Iteration"};
 	Timer timer(sectionNames, 5, TIMER_WINDOW_SIZE);
 
 	// launch the server and wait for a client
-	DepthServer server(PORT, compressionType, ROWS, COLS);
+	DepthServer server(PORT, ROWS, COLS);
 	std::cout << "Successfully initialized server" << std::endl;
 	server.WaitForClient();
 	
@@ -183,27 +133,20 @@ int main(int argc, char *argv[])
 		
 		// filter the frame in CUDA to remove values outside of the desired range
 		FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, DEPTH_MAX);
+		timer.SectionEnd();
 		
 		// map pixel values to 1-byte values in [0,(2^8)-1]
 		depthMat = (cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) - DEPTH_MIN ) / (DEPTH_MAX - DEPTH_MIN);
-		depthMat.convertTo(currentDepth, CV_8UC1, 255, 0);
+		depthMat.convertTo(currentDepth, CV_16UC1, (DEPTH_MAX - DEPTH_MIN)/DEPTH_RESOLUTION , 0);// 65535, 0); //
 		cv::Mat matrixToSend = currentDepth;
 		timer.SectionEnd();
 
-		if (performFiltering)
-		{
-			cv:medianBlur(currentDepth, depthDenoised, MEDIAN_FILTER_SIZE);	
-			matrixToSend = depthDenoised;
-		}
-		timer.SectionEnd();
-
-		int numBytesSent = server.SendMatrix(matrixToSend.data);
+		int numBytesSent = server.SendMatrixCompressedWithPNG(matrixToSend.data);
 		timer.SectionEnd();
 
 		protonect_shutdown = protonect_shutdown || (timer.GetCurrentTime() >= timeToRun) || !numBytesSent; // shutdown on escape
 
 		listener.release(frames);
-		stopTiming();
 		timer.SectionEnd();
 	}
 

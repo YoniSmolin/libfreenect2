@@ -16,21 +16,13 @@ typedef unsigned char uchar;
 class DepthServer : public Server
 {
 	public:
-		DepthServer(const char* portNumber, int compressionType, int rowCount, int colCount);
+		DepthServer(const char* portNumber, int rowCount, int colCount);
 
-		int  SendMatrix(const uchar* matrix);
 		int  SendMatrix(const float* matrix);
-				
-		~DepthServer();
-	private:
-		int  SendMatrixCompressedWithDelta(const uchar* toSend);
 		int  SendMatrixCompressedWithPNG(const uchar* toSend);
-	
+				
+	private:
 		int _rows, _columns;
-		char* _compressedImageBuffer;
-		uchar* _previousFrame;
-		bool _expectingFirstFrame;
-		char _compressionType;
 };
 
 #endif
