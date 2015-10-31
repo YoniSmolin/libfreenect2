@@ -37,7 +37,7 @@
 
 #include <fstream>
 
-#include <networking/DepthServer.hpp>
+#include <networking/KinectServer.hpp>
 
 #include <CUDA/Filter.h>
 

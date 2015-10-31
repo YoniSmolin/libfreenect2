@@ -96,7 +96,7 @@ SET(SOURCES
   ${RESOURCES_INC_FILE}
 
   src/Server.cpp
-  src/DepthServer.cpp
+  src/KinectServer.cpp
   src/Timer.cpp
 )
 
@@ -212,9 +212,13 @@ ADD_EXECUTABLE(DepthServer DepthServerMain.cpp)
 
 ADD_EXECUTABLE(DepthClipRecorder DepthClipRecorderMain.cpp)
 
+ADD_EXECUTABLE(IRServer IRServerMain.cpp)
+
 TARGET_LINK_LIBRARIES(DepthServer  freenect2)
 
 TARGET_LINK_LIBRARIES(DepthClipRecorder freenect2)
+
+TARGET_LINK_LIBRARIES(IRServer	freenect2)
 
 ADD_EXECUTABLE(DepthFiltered  DepthFiltered.cpp)
 

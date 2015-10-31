@@ -10,7 +10,7 @@
 #include <iostream>
 #include <string.h>
 #include <stdexcept> // exceptions
-#include <networking/DepthServer.hpp>
+#include <networking/KinectServer.hpp>
 
 #include <opencv2/highgui/highgui.hpp> // PNG compression
 
@@ -22,9 +22,9 @@
 using namespace std;
 using namespace cv;
 
-DepthServer::DepthServer(const char* portNumber, int rowCount, int colCount) : Server(portNumber), _rows(rowCount), _columns(colCount) {}
+KinectServer::KinectServer(const char* portNumber, int rowCount, int colCount) : Server(portNumber), _rows(rowCount), _columns(colCount) {}
 
-int  DepthServer::SendMatrix(const float* matrix)
+int  KinectServer::SendMatrix(const float* matrix)
 {
 	if (sizeof(float) != 4)
 		fprintf(stderr, "Server::SendMatrix - Float size must be 32 bits\n");
@@ -32,7 +32,7 @@ int  DepthServer::SendMatrix(const float* matrix)
 	return SendMessage((char*) matrix, _rows * _columns * sizeof(float));
 }
 
-int  DepthServer::SendMatrixCompressedWithPNG(const uchar* toSend)
+int  KinectServer::SendMatrixCompressedWithPNG(const uchar* toSend)
 {
 	Mat toSendMat = Mat(_rows, _columns, CV_16UC1, const_cast<uchar*>(toSend)); 
 

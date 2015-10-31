@@ -46,11 +46,8 @@
 #define ROWS 424
 #define COLS 512
 
-#define DEPTH_MIN 500.0f // [mm]
-#define DEPTH_MAX 4000.0f // [mm]
-#define DEPTH_RESOLUTION 2.5f // [mm]
-
-#define MEDIAN_FILTER_SIZE 3
+#define IR_MAX 20000.0f
+#define IR_DYNAMIC_RANGE 1024.0f
 
 #define TIMER_WINDOW_SIZE 100
 
@@ -94,7 +91,7 @@ int main(int argc, char *argv[])
 	std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
 	std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
 
-	libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Depth); //listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
+	libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Ir); //listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
 	libfreenect2::FrameMap frames;
 
 	dev->setIrAndDepthFrameListener(&listener);
@@ -105,15 +102,12 @@ int main(int argc, char *argv[])
 	protonect_shutdown = false;
 
 	// initialize main loop variables	
-	cv::moveWindow("Server",585,624) ;
-	cv::Mat currentDepth;
-	cv::Mat depthDenoised(ROWS, COLS, CV_8UC1);
-	float depthFiltered[ROWS*COLS];
+	Mat irToSend;
 	double runTime = 0;
 
 	// initialize Timer (for profiling)
-	const char* sectionNames[] = { "Acquire Frame", "Filter Raw Frame", "Quantize", "Send to client", "End of Iteration"};
-	Timer timer(sectionNames, 5, TIMER_WINDOW_SIZE);
+	const char* sectionNames[] = { "Acquire Frame", "Quantize", "Send to client", "End of Iteration"};
+	Timer timer(sectionNames, 4, TIMER_WINDOW_SIZE);
 
 	// launch the server and wait for a client
 	KinectServer server(PORT, ROWS, COLS);
@@ -127,21 +121,15 @@ int main(int argc, char *argv[])
 		
 		// obtain frame from libfreenect runtime - 4 bytes per pixel - values are floating point in units of [mm]
 		listener.waitForNewFrame(frames);
-		libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
-		cv::Mat depthMat = cv::Mat(depth->height, depth->width, CV_32FC1, depth->data);
-		timer.SectionEnd();
-		
-		// filter the frame in CUDA to remove values outside of the desired range
-		FilterGPU((float*)depthMat.data, depthFiltered, depth->height, depth->width, DEPTH_MAX);
+		libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
+		cv::Mat irMat = cv::Mat(ir->height, ir->width, CV_32FC1, ir->data) / IR_MAX;
 		timer.SectionEnd();
 		
 		// map pixel values to 1-byte values in [0,(2^8)-1]
-		depthMat = (cv::Mat(depth->height, depth->width, CV_32FC1, depthFiltered) - DEPTH_MIN ) / (DEPTH_MAX - DEPTH_MIN);
-		depthMat.convertTo(currentDepth, CV_16UC1, (DEPTH_MAX - DEPTH_MIN)/DEPTH_RESOLUTION , 0);// 65535, 0); //
-		cv::Mat matrixToSend = currentDepth;
+		irMat.convertTo(irToSend, CV_16UC1, IR_DYNAMIC_RANGE, 0);// 65535, 0); //
 		timer.SectionEnd();
 
-		int numBytesSent = server.SendMatrixCompressedWithPNG(matrixToSend.data);
+		int numBytesSent = server.SendMatrixCompressedWithPNG(irToSend.data);
 		timer.SectionEnd();
 
 		protonect_shutdown = protonect_shutdown || (timer.GetCurrentTime() >= timeToRun) || !numBytesSent; // shutdown on escape
