@@ -1,5 +1,5 @@
 /*
- ** Server.cpp - class implementation
+ ** KinectServer.cpp - a server for Kinect outputs
  */
 
 #include <stdio.h>
@@ -22,7 +22,15 @@
 using namespace std;
 using namespace cv;
 
-KinectServer::KinectServer(const char* portNumber, int rowCount, int colCount) : Server(portNumber), _rows(rowCount), _columns(colCount) {}
+KinectServer::KinectServer(const char* portNumber, int rowCount, int colCount) : Server(portNumber), _rows(rowCount), _columns(colCount)
+{
+	_jpegCompressor = new JpegCompressor(rowCount, colCount);
+}
+
+KinectServer::~KinectServer()
+{
+	delete _jpegCompressor;
+}
 
 int  KinectServer::SendMatrix(const float* matrix)
 {
@@ -39,7 +47,7 @@ int  KinectServer::SendMatrixCompressedWithPNG(const uchar* toSend)
 	// wrap the compressed image buffer with a vector
 	vector<uchar> compressed;
 	// encode the image to PNG
-	imencode(".png", toSendMat, compressed);	
+	imencode(".jpeg", toSendMat, compressed);	
 	
 	// prepare the header
 	char header[BYTES_IN_HEADER];
@@ -53,5 +61,33 @@ int  KinectServer::SendMatrixCompressedWithPNG(const uchar* toSend)
 	if (sentBytesHeader < BYTES_IN_HEADER) return 0;
 
 	// send the PNG body
-	return sentBytesHeader + SendMessage((char*)&compressed[0], compressedSize);
+	int sentBytesBody = SendMessage((char*)&compressed[0], compressedSize);
+	if (sentBytesBody < compressedSize) return 0;
+
+	return sentBytesHeader + sentBytesBody;
+}
+
+int KinectServer::SendMatrixCompressedWithJPEG(const uchar* uncompressed)
+{
+	std::cout << "#### Control: Starting JPEG compressoin" << std::endl;
+	// preform the compression
+	int compressedSize = _jpegCompressor->Compress(uncompressed);
+	std::cout << "#### Control: JPEG compression is done, size is " << compressedSize << std::endl;
+	// prepare the header
+	char header[BYTES_IN_HEADER];
+	header[0] = compressedSize;
+	header[1] = compressedSize >> BYTE;
+	header[2] = compressedSize >> 2*BYTE;
+	 
+	// send the header
+	int sentBytesHeader = SendMessage(header, BYTES_IN_HEADER);
+	if (sentBytesHeader < BYTES_IN_HEADER) return 0;
+
+	std::cout << "#### Control: JPEG header delievered" << std::endl;
+	// send the PNG body
+	int sentBytesBody = SendMessage((const char*)(_jpegCompressor->GetCompressed()), compressedSize);
+	if (sentBytesBody < compressedSize) return 0;
+	std::cout << "#### Control: JPEG body delivered" << std::endl;
+
+	return sentBytesHeader + sentBytesBody;
 }

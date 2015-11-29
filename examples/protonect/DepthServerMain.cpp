@@ -105,7 +105,6 @@ int main(int argc, char *argv[])
 	protonect_shutdown = false;
 
 	// initialize main loop variables	
-	cv::moveWindow("Server",585,624) ;
 	cv::Mat currentDepth;
 	cv::Mat depthDenoised(ROWS, COLS, CV_8UC1);
 	float depthFiltered[ROWS*COLS];

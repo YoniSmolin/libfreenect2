@@ -98,6 +98,7 @@ SET(SOURCES
   src/Server.cpp
   src/KinectServer.cpp
   src/Timer.cpp
+  src/JpegCompressor.cpp
 )
 
 SET(LIBRARIES
@@ -214,15 +215,23 @@ ADD_EXECUTABLE(DepthClipRecorder DepthClipRecorderMain.cpp)
 
 ADD_EXECUTABLE(IRServer IRServerMain.cpp)
 
+ADD_EXECUTABLE(ColorServer ColorServerMain.cpp)
+
+ADD_EXECUTABLE(DepthFiltered  DepthFiltered.cpp)
+
+ADD_EXECUTABLE(JPEG JPEG.cpp)
+
 TARGET_LINK_LIBRARIES(DepthServer  freenect2)
 
 TARGET_LINK_LIBRARIES(DepthClipRecorder freenect2)
 
 TARGET_LINK_LIBRARIES(IRServer	freenect2)
 
-ADD_EXECUTABLE(DepthFiltered  DepthFiltered.cpp)
-
 TARGET_LINK_LIBRARIES(DepthFiltered  freenect2)
+
+TARGET_LINK_LIBRARIES(ColorServer freenect2)
+
+TARGET_LINK_LIBRARIES(JPEG freenect2)
 
 CONFIGURE_FILE(freenect2.cmake.in "${PROJECT_BINARY_DIR}/freenect2Config.cmake" @ONLY)
 
