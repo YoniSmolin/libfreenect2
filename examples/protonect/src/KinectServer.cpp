@@ -47,7 +47,7 @@ int  KinectServer::SendMatrixCompressedWithPNG(const uchar* toSend)
 	// wrap the compressed image buffer with a vector
 	vector<uchar> compressed;
 	// encode the image to PNG
-	imencode(".jpeg", toSendMat, compressed);	
+	imencode(".png", toSendMat, compressed);	
 	
 	// prepare the header
 	char header[BYTES_IN_HEADER];
@@ -69,10 +69,10 @@ int  KinectServer::SendMatrixCompressedWithPNG(const uchar* toSend)
 
 int KinectServer::SendMatrixCompressedWithJPEG(const uchar* uncompressed)
 {
-	std::cout << "#### Control: Starting JPEG compressoin" << std::endl;
+	// prep the compression object and the compressed image buffer
 	// preform the compression
 	int compressedSize = _jpegCompressor->Compress(uncompressed);
-	std::cout << "#### Control: JPEG compression is done, size is " << compressedSize << std::endl;
+
 	// prepare the header
 	char header[BYTES_IN_HEADER];
 	header[0] = compressedSize;
@@ -83,11 +83,9 @@ int KinectServer::SendMatrixCompressedWithJPEG(const uchar* uncompressed)
 	int sentBytesHeader = SendMessage(header, BYTES_IN_HEADER);
 	if (sentBytesHeader < BYTES_IN_HEADER) return 0;
 
-	std::cout << "#### Control: JPEG header delievered" << std::endl;
 	// send the PNG body
 	int sentBytesBody = SendMessage((const char*)(_jpegCompressor->GetCompressed()), compressedSize);
 	if (sentBytesBody < compressedSize) return 0;
-	std::cout << "#### Control: JPEG body delivered" << std::endl;
 
 	return sentBytesHeader + sentBytesBody;
 }

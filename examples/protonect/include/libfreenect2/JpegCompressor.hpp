@@ -7,18 +7,15 @@
 
 #include <string>
 
-#include "nv_headers/jpeglib.h"
+#include <turbojpeg.h>
 
 typedef unsigned char uchar;
 
 class JpegCompressor
 {
 	public:
-		JpegCompressor(int rowCount, int colCount);
+		JpegCompressor(int rowCount, int colCount, int jpegQuality = 80); // jpeg Quality is between 0 and 100
 		
-		static void ExitOnError(j_common_ptr info);		
-		static void AbortAndThrow(j_compress_ptr cinfo, const std::string buffer);
-
 		int Compress(const uchar* image);
 		const uchar* GetCompressed();
 
@@ -27,11 +24,11 @@ class JpegCompressor
 	private:
 		int _rows, _columns;
 		
+		int _jpegQuality;
 		uchar* _jpegBuffer;
-		unsigned long  _jpegLength;
+		unsigned long _jpegCompressedSize;
 
-		struct jpeg_compress_struct* _cinfo;
-		struct jpeg_error_mgr* _jerr;
+		tjhandle _compressor;
 };
 
 #endif
