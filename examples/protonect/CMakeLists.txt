@@ -99,6 +99,7 @@ SET(SOURCES
   src/KinectServer.cpp
   src/Timer.cpp
   src/JpegCompressor.cpp
+  src/FrameGrabber.cpp
 )
 
 SET(LIBRARIES
