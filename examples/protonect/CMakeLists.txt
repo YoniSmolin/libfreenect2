@@ -102,8 +102,6 @@ SET(SOURCES
   src/NetworkFrameProcessor.cpp
   src/FrameServer.cpp
   src/UserInputProcessor.cpp
-
-  src/KinectServer.cpp
 )
 
 SET(LIBRARIES
@@ -214,9 +212,9 @@ ADD_EXECUTABLE(Protonect  Protonect.cpp)
 
 TARGET_LINK_LIBRARIES(Protonect  freenect2) 
 
-ADD_EXECUTABLE(KinectServerApp KinectServerApp.cpp)
+ADD_EXECUTABLE(KinectServer KinectServerApp.cpp)
 
-TARGET_LINK_LIBRARIES(KinectServerApp freenect2)
+TARGET_LINK_LIBRARIES(KinectServer freenect2)
 
 CONFIGURE_FILE(freenect2.cmake.in "${PROJECT_BINARY_DIR}/freenect2Config.cmake" @ONLY)
 
