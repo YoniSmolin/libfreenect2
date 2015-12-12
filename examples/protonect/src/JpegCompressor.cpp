@@ -6,46 +6,47 @@
 #include <stdexcept> // exceptions
 #include <iostream>
 
-#include <libfreenect2/JpegCompressor.hpp>
+#include <networking/JpegCompressor.hpp>
 
-/////////////////////////////////////   public 	 //////////////////////////////////////////
-
-JpegCompressor::JpegCompressor(int rowCount, int colCount, int jpegQuality) : _rows(rowCount), _columns(colCount), _jpegQuality(jpegQuality)
+namespace Networking
 {
-	_compressor = tjInitCompress();
-	if(_compressor == 0)
+	JpegCompressor::JpegCompressor(int rowCount, int colCount, int jpegQuality) : _rows(rowCount), _columns(colCount), _jpegQuality(jpegQuality)
 	{
-		std::cerr << "failed to initialize turbojpeg decompressor! turbojpeg error: '" << tjGetErrorStr() << "'" << std::endl;
-		return;
+		_compressor = tjInitCompress();
+		if(_compressor == 0)
+		{
+			std::cerr << "failed to initialize turbojpeg decompressor! turbojpeg error: '" << tjGetErrorStr() << "'" << std::endl;
+			return;
+		}
+
+		_jpegBuffer = new uchar[tjBufSize(_columns, _rows, TJSAMP_420)];
+
+		std::cout << "JPEG compression will be performed with one chrominance component for every 2x2 block of pixels in the source image. To change this, edit src/JpegCompressor.cpp."
+			<< std::endl;
 	}
 
-	_jpegBuffer = new uchar[tjBufSize(_columns, _rows, TJSAMP_420)];
-
-	std::cout << "JPEG compression will be performed with one chrominance component for every 2x2 block of pixels in the source image. To change this, edit src/JpegCompressor.cpp."
-	     << std::endl;
-}
-
-JpegCompressor::~JpegCompressor()
-{
-	tjDestroy(_compressor);
-	delete[] _jpegBuffer;
-}
-
-int JpegCompressor::Compress(const uchar* uncompressed)
-{
-	int result = tjCompress2(_compressor, const_cast<uchar*>(uncompressed), _columns, _columns * tjPixelSize[TJPF_RGBA], _rows, TJPF_RGBA,
-				 &_jpegBuffer, &_jpegCompressedSize, TJSAMP_420, _jpegQuality, TJFLAG_NOREALLOC);
-
-	if (result != 0)
+	JpegCompressor::~JpegCompressor()
 	{
-	      std::cerr << "failed to decompress rgb image! turbojpeg error: '" << tjGetErrorStr() << "'" << std::endl;
-	      return 0;
+		tjDestroy(_compressor);
+		delete[] _jpegBuffer;
 	}
 
-	return _jpegCompressedSize;
-}
+	int JpegCompressor::Compress(const uchar* uncompressed)
+	{
+		int result = tjCompress2(_compressor, const_cast<uchar*>(uncompressed), _columns, _columns * tjPixelSize[TJPF_RGBA], _rows, TJPF_RGBA,
+				&_jpegBuffer, &_jpegCompressedSize, TJSAMP_420, _jpegQuality, TJFLAG_NOREALLOC);
 
-const uchar* JpegCompressor::GetCompressed()
-{
-	return _jpegBuffer;
+		if (result != 0)
+		{
+			std::cerr << "failed to decompress rgb image! turbojpeg error: '" << tjGetErrorStr() << "'" << std::endl;
+			return 0;
+		}
+
+		return _jpegCompressedSize;
+	}
+
+	const uchar* JpegCompressor::GetCompressed()
+	{
+		return _jpegBuffer;
+	}
 }

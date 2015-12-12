@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 PROJECT(libfreenect2)
-SET(CMAKE_BUILD_TYPE RelWithDebInfo)
+SET(CMAKE_BUILD_TYPE RelWithDebugInfo)
 
 SET(MY_DIR ${libfreenect2_SOURCE_DIR})
 
@@ -96,10 +96,14 @@ SET(SOURCES
   ${RESOURCES_INC_FILE}
 
   src/Server.cpp
-  src/KinectServer.cpp
   src/Timer.cpp
   src/JpegCompressor.cpp
   src/FrameGrabber.cpp
+  src/NetworkFrameProcessor.cpp
+  src/FrameServer.cpp
+  src/UserInputProcessor.cpp
+
+  src/KinectServer.cpp
 )
 
 SET(LIBRARIES
@@ -207,32 +211,12 @@ ADD_LIBRARY(freenect2 SHARED ${SOURCES})
 TARGET_LINK_LIBRARIES(freenect2 ${LIBRARIES})
 
 ADD_EXECUTABLE(Protonect  Protonect.cpp)
-  
-TARGET_LINK_LIBRARIES(Protonect  freenect2)
 
-ADD_EXECUTABLE(DepthServer DepthServerMain.cpp)
+TARGET_LINK_LIBRARIES(Protonect  freenect2) 
 
-ADD_EXECUTABLE(DepthClipRecorder DepthClipRecorderMain.cpp)
+ADD_EXECUTABLE(KinectServerApp KinectServerApp.cpp)
 
-ADD_EXECUTABLE(IRServer IRServerMain.cpp)
-
-ADD_EXECUTABLE(ColorServer ColorServerMain.cpp)
-
-ADD_EXECUTABLE(DepthFiltered  DepthFiltered.cpp)
-
-ADD_EXECUTABLE(JPEG JPEG.cpp)
-
-TARGET_LINK_LIBRARIES(DepthServer  freenect2)
-
-TARGET_LINK_LIBRARIES(DepthClipRecorder freenect2)
-
-TARGET_LINK_LIBRARIES(IRServer	freenect2)
-
-TARGET_LINK_LIBRARIES(DepthFiltered  freenect2)
-
-TARGET_LINK_LIBRARIES(ColorServer freenect2)
-
-TARGET_LINK_LIBRARIES(JPEG freenect2)
+TARGET_LINK_LIBRARIES(KinectServerApp freenect2)
 
 CONFIGURE_FILE(freenect2.cmake.in "${PROJECT_BINARY_DIR}/freenect2Config.cmake" @ONLY)
 
