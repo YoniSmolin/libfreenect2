@@ -61,8 +61,6 @@ namespace Networking
 		
 		ColorProperties* colorProps = new ColorProperties();
 
-		colorProps = new ColorProperties();
-
 		switch(argc)
 		{
 			case 3: colorProps->CompressionQuality = (unsigned int) atoi(argv[2]);

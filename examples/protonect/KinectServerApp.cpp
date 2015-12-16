@@ -61,7 +61,9 @@ int main(int argc, char *argv[])
 	const char* sectionNames[] = { "Acquire Frame", "Process Frame", "Send to client", "End of Iteration"};
 	Timer timer(sectionNames, 4, TIMER_WINDOW_SIZE);
 
+	// Connect to client and send metadata
 	server.WaitForClient();
+	protonect_shutdown = !server.SendMetadata(properties->Type);
 
 	// main loop
 	while(!protonect_shutdown)
