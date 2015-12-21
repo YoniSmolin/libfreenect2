@@ -102,7 +102,7 @@ namespace Networking
 		// if desired - CUDA filterting can be performed at this stage
 		
 		// we need to convert to an unsigned char format for the PNG compression (but a single byte is not enough to represent a depth pixel, so we use 2 bytes)
-		depthMat.convertTo(depthMat, CV_16UC1, 1 / props->Resolution , 0);
+		depthMat.convertTo(depthMat, props->PixelType, 1 / props->Resolution , 0);
 
 		imencode(".png", depthMat, _compressedPNG);	
 
