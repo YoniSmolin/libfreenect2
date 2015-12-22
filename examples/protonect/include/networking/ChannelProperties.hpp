@@ -9,6 +9,8 @@
 
 namespace Networking
 {
+	extern const std::map<int, unsigned int> PixelTypeToPixelMaxValue;
+
 	struct ChannelProperties 
 	{
 		libfreenect2::Frame::Type Type;

@@ -102,6 +102,7 @@ SET(SOURCES
   src/NetworkFrameProcessor.cpp
   src/FrameServer.cpp
   src/UserInputProcessor.cpp
+  src/ChannelProperties.cpp
 )
 
 SET(LIBRARIES

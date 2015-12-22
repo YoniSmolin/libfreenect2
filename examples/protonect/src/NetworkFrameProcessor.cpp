@@ -16,16 +16,6 @@ using namespace libfreenect2;
 
 namespace Networking
 {
-	std::map<int, unsigned int> NetworkFrameProcessor::CreateMap()
-	{
-		std::map<int, unsigned int> result;
-		result[CV_8UC1] = 255;
-		result[CV_16UC1] = 65535;
-		return result;
-	}
-
-	const std::map<int, unsigned int> NetworkFrameProcessor::_pixelTypeToPixelMaxValue = CreateMap();
-
 	NetworkFrameProcessor::NetworkFrameProcessor(ChannelProperties* properties) : _properties(properties), _colorCompressor(NULL) 
  	{
 		switch (_properties->Type)
@@ -83,7 +73,7 @@ namespace Networking
 
 		cv::Mat irMat(frame->height, frame->width, CV_32FC1, frame->data);
 		
-		irMat.convertTo(irMat, props->PixelType, _pixelTypeToPixelMaxValue.find(props->PixelType)->second / props->InputSaturationLevel , 0);
+		irMat.convertTo(irMat, props->PixelType, PixelTypeToPixelMaxValue.find(props->PixelType)->second / props->InputSaturationLevel , 0);
 
 		imencode(".png", irMat, _compressedPNG);	
 

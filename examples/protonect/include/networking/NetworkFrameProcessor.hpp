@@ -24,8 +24,6 @@ namespace Networking
 		JpegCompressor* _colorCompressor; // jpeg compressor for the color channel
 		std::vector<unsigned char> _compressedPNG;// contains compressed PNG for the depth/IR compression
 
-		static const std::map<int, unsigned int> _pixelTypeToPixelMaxValue;
-
 		public:
 			NetworkFrameProcessor(ChannelProperties* properties);
 
@@ -37,8 +35,6 @@ namespace Networking
 			NetworkPacket ProcessColorFrame(const libfreenect2::Frame* frame);
 			NetworkPacket ProcessIrFrame(const libfreenect2::Frame* frame);
 			NetworkPacket ProcessDepthFrame(const libfreenect2::Frame* frame);
-
-			static std::map<int, unsigned int> CreateMap();
 	};
 }
 
