@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <map>
+#include <time.h>
 
 namespace Networking 
 {
@@ -15,6 +16,7 @@ namespace Networking
 		libfreenect2::Frame::Type Type;
 		size_t Size;
 		const char* Data;
+		struct timespec Timestamp;
 	};
 
 	// The class manages its own memory, releases everything upon destruction

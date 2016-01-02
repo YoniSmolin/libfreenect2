@@ -18,6 +18,15 @@ namespace Networking
 		header[0] = packet.Size;
 		header[1] = packet.Size >> ByteSizeInBits;
 		header[2] = packet.Size >> 2*ByteSizeInBits;
+		
+		// send the timestammp
+	        time_t secondsSinceEpoch = packet.Timestamp.tv_sec;
+		int sentBytesSeconds = SendMessage((const char*)&secondsSinceEpoch, sizeof(time_t));		
+		if (sentBytesSeconds < sizeof(time_t)) return false;
+
+		long residualMilliseconds = round(packet.Timestamp.tv_nsec / 1.0e6);
+		int sentBytesMilliseconds = SendMessage((const char*)&residualMilliseconds, sizeof(long));
+		if (sentBytesMilliseconds < sizeof(long)) return false;		
 
 		// send the header
 		int sentBytesHeader = SendMessage(header, HeaderSizeInBytes);

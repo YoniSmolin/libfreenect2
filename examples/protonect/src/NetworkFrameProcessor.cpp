@@ -39,13 +39,21 @@ namespace Networking
 
 	NetworkPacket NetworkFrameProcessor::ProcessFrame(const Frame* frame)
 	{
+		NetworkPacket packet;
+
 		switch (_properties->Type)
 		{
-			case Frame::Color: return ProcessColorFrame(frame);
-			case Frame::Ir: return ProcessIrFrame(frame); 
-			case Frame::Depth: return ProcessDepthFrame(frame);
+			case Frame::Color: packet = ProcessColorFrame(frame);
+					   break;
+			case Frame::Ir:    packet = ProcessIrFrame(frame); 
+					   break;
+			case Frame::Depth: packet = ProcessDepthFrame(frame);
+					   break;
 			default: throw std::runtime_error("Could not identify the type of frame");
 		}
+		
+		clock_gettime(CLOCK_REALTIME, &packet.Timestamp);
+		return packet;
 	}
 
 	NetworkPacket NetworkFrameProcessor::ProcessColorFrame(const Frame* frame)
