@@ -75,8 +75,7 @@ int main(int argc, char *argv[])
 	{
 		timer.FrameStart();
 		
-		// obtain frame from libfreenect runtime - 4 bytes per pixel 
-		const libfreenect2::Frame* frame = frameGrabber.GrabFrame(); // rgba
+		const libfreenect2::Frame* frame = frameGrabber.GrabFrame();
 		timer.SectionEnd();
 
 		const Networking::NetworkPacket packet = frameProcessor.ProcessFrame(frame);

@@ -17,11 +17,15 @@ namespace libfreenect2
 
 		bool _verbose;
 
-		public:
+	public:
 		FrameGrabber(Frame::Type, bool verbose);
+		
 		const Frame* GrabFrame();
 		void ReleaseFrame();
+		
 		~FrameGrabber();
+	private:
+		void PrintIntrinsics();
 	};
 }
 #endif
