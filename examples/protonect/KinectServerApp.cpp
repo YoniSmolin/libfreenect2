@@ -20,8 +20,6 @@
 // constant defines
 #define PORT "3490"
 
-#define TIMER_WINDOW_SIZE 100
-
 // globals
 bool protonect_shutdown = false;
 
@@ -64,7 +62,7 @@ int main(int argc, char *argv[])
 
 	// initialize Timer (for profiling)
 	const char* sectionNames[] = { "Acquire Frame", "Process Frame", "Send to client", "End of Iteration"};
-	Timer timer(sectionNames, 4, TIMER_WINDOW_SIZE);
+	Timer timer(sectionNames, 4);
 
 	// Connect to client and send metadata
 	server.WaitForClient();

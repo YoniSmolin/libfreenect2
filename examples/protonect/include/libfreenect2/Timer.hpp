@@ -10,19 +10,17 @@ using namespace cv;
 class Timer
 {
 	public:
-		Timer(const char** sectionNames, int sectionCount, int frameWindowSize);
+		Timer(const char** sectionNames, int sectionCount);
 		~Timer();
 
 		void FrameStart();
 		void SectionEnd();
 		double GetCurrentTime();
-//		float* AverageLatencies();
 
 	private:
 		int _numberOfSections;
 		int _numberOfFrames;
 		int _currentSection;
-		const int _frameWindowSize;
 		const char** _sectionNames;
 
 		double _startTime;

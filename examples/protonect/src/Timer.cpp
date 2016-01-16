@@ -2,7 +2,7 @@
 
 #define MILISECONDS_IN_SECOND 1000
 
-Timer::Timer(const char** sectionNames, int sectionCount, int frameWindowSize) : _sectionNames(sectionNames), _numberOfSections(sectionCount), _frameWindowSize(frameWindowSize), _startTime(0)
+Timer::Timer(const char** sectionNames, int sectionCount) : _sectionNames(sectionNames), _numberOfSections(sectionCount), _startTime(0)
 {
 	_logFile = fopen("ProfileLog.txt", "w");
 
@@ -13,6 +13,8 @@ Timer::Timer(const char** sectionNames, int sectionCount, int frameWindowSize) :
 
 Timer::~Timer()
 {
+	for (int i = 0; i < _numberOfSections; i++ )
+		fprintf(_logFile, "%s: %2.2f\n", _sectionNames[i], MILISECONDS_IN_SECOND*_sectionDurations[i]/_numberOfFrames);
 	fclose(_logFile);
 }
 
@@ -23,10 +25,10 @@ void Timer::FrameStart()
 		_startTime = _previousTime;
 	_currentSection = 0;
 
-	for (int i = 0; i < _numberOfSections; i++)
-		_sectionDurations[i] = 0;
+	//for (int i = 0; i < _numberOfSections; i++)
+	//	_sectionDurations[i] = 0;
 
-	fprintf(_logFile, "******* Frame #%d *********\n", _numberOfFrames+1);
+	//fprintf(_logFile, "******* Frame #%d *********\n", _numberOfFrames+1);
 }
 
 void Timer::SectionEnd()
@@ -39,8 +41,8 @@ void Timer::SectionEnd()
 	{
 		_numberOfFrames++;
 
-		for (int i = 0; i < _numberOfSections; i++ )
-			fprintf(_logFile, "%s: %2.2f\n", _sectionNames[i], MILISECONDS_IN_SECOND*_sectionDurations[i]);
+		//for (int i = 0; i < _numberOfSections; i++ )
+		//	fprintf(_logFile, "%s: %2.2f\n", _sectionNames[i], MILISECONDS_IN_SECOND*_sectionDurations[i]);
 	}
 }
 
