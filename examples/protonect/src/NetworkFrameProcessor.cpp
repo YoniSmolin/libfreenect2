@@ -40,7 +40,8 @@ namespace Networking
 	NetworkPacket NetworkFrameProcessor::ProcessFrame(const Frame* frame)
 	{
 		NetworkPacket packet;
-		clock_gettime(CLOCK_REALTIME, &packet.Timestamp);
+		struct timespec timestamp;
+		clock_gettime(CLOCK_REALTIME, &timestamp);
 
 		switch (_properties->Type)
 		{
@@ -52,7 +53,8 @@ namespace Networking
 					   break;
 			default: throw std::runtime_error("Could not identify the type of frame");
 		}
-		
+			
+		packet.Timestamp = timestamp;
 		return packet;
 	}
 
