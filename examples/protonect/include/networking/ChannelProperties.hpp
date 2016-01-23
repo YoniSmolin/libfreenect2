@@ -40,7 +40,7 @@ namespace Networking
 	{
 		float InputSaturationLevel; // any value above this in the IR input will be saturated
 		IrProperties() : ChannelProperties(libfreenect2::Frame::Ir, 512, 424, CV_8UC1),
-				 InputSaturationLevel(5000) {}
+				 InputSaturationLevel(20000) {}
 	};
 
 	struct DepthProperties : ChannelProperties
